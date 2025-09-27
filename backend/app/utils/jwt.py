@@ -5,7 +5,7 @@ This module provides JWT token creation, verification, and management functions.
 """
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any
 from jose import JWTError, jwt
 from fastapi import HTTPException, status
@@ -36,9 +36,9 @@ def create_access_token(data: Dict[str, Any], expires_delta: Optional[timedelta]
     to_encode = data.copy()
     
     if expires_delta:
-        expire = datetime.utcnow() + expires_delta
+        expire = datetime.now(timezone.utc) + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     
     to_encode.update({"exp": expire, "type": "access"})
     
@@ -64,7 +64,7 @@ def create_refresh_token(data: Dict[str, Any]) -> str:
         str: The encoded JWT refresh token
     """
     to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+    expire = datetime.now(timezone.utc) + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
     to_encode.update({"exp": expire, "type": "refresh"})
     
     try:
@@ -112,7 +112,7 @@ def verify_token(token: str, token_type: str = "access") -> Dict[str, Any]:
                 headers={"WWW-Authenticate": "Bearer"},
             )
         
-        if datetime.utcnow() > datetime.fromtimestamp(exp):
+        if datetime.now(timezone.utc) > datetime.fromtimestamp(exp, tz=timezone.utc):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Token expired",
@@ -181,4 +181,4 @@ def is_token_expired(token: str) -> bool:
     exp_time = get_token_expiration(token)
     if exp_time is None:
         return True
-    return datetime.utcnow() > exp_time
+    return datetime.now(timezone.utc) > exp_time

@@ -4,7 +4,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Link, useNavigate, useLocation } from "react-router";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
-import { toast } from "sonner";
 
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -59,13 +58,11 @@ const Login = () => {
   const onSubmit = async (data: LoginFormData) => {
     try {
       await loginMutation.mutateAsync(data);
-      toast.success("Login successful!");
-      const from = location.state?.from?.pathname || "/home";
-      navigate(from, { replace: true });
+      // Success handling is now done in the mutation hook with optimistic updates
+      // Navigation will be handled by PublicRoute when isAuthenticated becomes true
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Login failed";
-      toast.error(errorMessage);
+      // Error handling is now done in the mutation hook
+      console.error("Login failed:", error);
     }
   };
 

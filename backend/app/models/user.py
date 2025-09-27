@@ -67,4 +67,8 @@ class UserSession(Base, TimestampMixin):
     @property
     def is_expired(self) -> bool:
         """Check if session is expired."""
-        return datetime.utcnow() > self.expires_at.replace(tzinfo=None)
+        from datetime import timezone
+        # Convert both to UTC for comparison
+        now_utc = datetime.now(timezone.utc)
+        expires_utc = self.expires_at.replace(tzinfo=timezone.utc) if self.expires_at.tzinfo is None else self.expires_at
+        return now_utc > expires_utc

@@ -4,7 +4,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Link, useNavigate } from "react-router";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
-import { toast } from "sonner";
 
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -21,8 +20,8 @@ const registerSchema = z
       .min(3, "Username must be at least 3 characters")
       .max(20, "Username must be less than 20 characters")
       .regex(
-        /^[a-zA-Z0-9_]+$/,
-        "Username can only contain letters, numbers, and underscores"
+        /^[a-zA-Z0-9_-]+$/,
+        "Username can only contain letters, numbers, underscores, and hyphens"
       ),
     email: z
       .string()
@@ -32,9 +31,10 @@ const registerSchema = z
       .string()
       .min(1, "Password is required")
       .min(8, "Password must be at least 8 characters")
+      .max(20, "Password must be at most 20 characters")
       .regex(
-        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
-        "Password must contain at least one uppercase letter, one lowercase letter, and one number"
+        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>])/,
+        "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character"
       ),
     confirmPassword: z.string().min(1, "Please confirm your password"),
     firstName: z
@@ -87,14 +87,10 @@ const Register = () => {
     try {
       const { confirmPassword: _, ...registerData } = data;
       await registerMutation.mutateAsync(registerData);
-      toast.success(
-        "Registration successful! Welcome to Financial Document Analyzer!"
-      );
-      navigate("/home", { replace: true });
+      // Success handling is now done in the mutation hook with optimistic updates
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Registration failed";
-      toast.error(errorMessage);
+      // Error handling is now done in the mutation hook
+      console.error("Registration failed:", error);
     }
   };
 

@@ -5,14 +5,15 @@ This module contains authentication endpoints for user registration, login, logo
 """
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status, Request
+from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete
 from sqlalchemy.exc import IntegrityError
 
-from app.database import get_postgres_session
+from app.database import get_db_session
 from app.models.user import User, UserSession
 from app.models.schemas import (
     UserRegisterRequest,
@@ -38,20 +39,22 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
 
-@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
 async def register_user(
     user_data: UserRegisterRequest,
-    db: AsyncSession = Depends(get_postgres_session)
+    request: Request,
+    db: AsyncSession = Depends(get_db_session)
 ):
     """
-    Register a new user.
+    Register a new user and return JWT tokens.
     
     Args:
         user_data: User registration data
+        request: FastAPI request object
         db: Database session
         
     Returns:
-        UserResponse: The created user information
+        TokenResponse: JWT tokens and user information
         
     Raises:
         HTTPException: If registration fails
@@ -93,16 +96,45 @@ async def register_user(
         
         logger.info(f"User registered successfully: {user.username}")
         
-        return UserResponse(
-            id=user.id,
-            username=user.username,
-            email=user.email,
-            first_name=user.first_name,
-            last_name=user.last_name,
-            is_active=user.is_active,
-            is_verified=user.is_verified,
-            created_at=user.created_at,
-            updated_at=user.updated_at
+        # Create tokens for automatic login after registration
+        access_token = create_access_token(data={"sub": str(user.id)})
+        refresh_token = create_refresh_token(data={"sub": str(user.id)})
+        
+        # Get client information
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("user-agent", "unknown")
+        device_info = f"{user_agent} - {client_ip}"
+        
+        # Create session
+        session = UserSession(
+            user_id=user.id,
+            session_token=access_token,
+            refresh_token=refresh_token,
+            device_info=device_info,
+            ip_address=client_ip,
+            user_agent=user_agent,
+            expires_at=datetime.now(timezone.utc) + timedelta(minutes=30)  # Access token expiration
+        )
+        
+        db.add(session)
+        await db.commit()
+        
+        return TokenResponse(
+            access_token=access_token,
+            refresh_token=refresh_token,
+            token_type="bearer",
+            expires_in=30 * 60,  # 30 minutes in seconds
+            user=UserResponse(
+                id=user.id,
+                username=user.username,
+                email=user.email,
+                first_name=user.first_name,
+                last_name=user.last_name,
+                is_active=user.is_active,
+                is_verified=user.is_verified,
+                created_at=user.created_at,
+                updated_at=user.updated_at
+            )
         )
         
     except IntegrityError as e:
@@ -125,7 +157,7 @@ async def register_user(
 async def login_user(
     login_data: UserLoginRequest,
     request: Request,
-    db: AsyncSession = Depends(get_postgres_session)
+    db: AsyncSession = Depends(get_db_session)
 ):
     """
     Login user and return JWT tokens.
@@ -177,7 +209,7 @@ async def login_user(
             device_info=device_info,
             ip_address=client_ip,
             user_agent=user_agent,
-            expires_at=datetime.utcnow() + timedelta(minutes=30)  # Access token expiration
+            expires_at=datetime.now(timezone.utc) + timedelta(minutes=30)  # Access token expiration
         )
         
         db.add(session)
@@ -218,7 +250,7 @@ async def login_user(
 async def logout_user(
     logout_data: LogoutRequest,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_postgres_session)
+    db: AsyncSession = Depends(get_db_session)
 ):
     """
     Logout user and invalidate session(s).
@@ -296,7 +328,7 @@ async def get_current_user_info(
 async def update_current_user(
     user_data: UserUpdateRequest,
     current_user: User = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_postgres_session)
+    db: AsyncSession = Depends(get_db_session)
 ):
     """
     Update current user information.
@@ -358,7 +390,7 @@ async def update_current_user(
 async def change_password(
     password_data: PasswordChangeRequest,
     current_user: User = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_postgres_session)
+    db: AsyncSession = Depends(get_db_session)
 ):
     """
     Change user password.
@@ -413,7 +445,7 @@ async def change_password(
 @router.get("/sessions", response_model=UserSessionsResponse)
 async def get_user_sessions(
     current_user: User = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_postgres_session)
+    db: AsyncSession = Depends(get_db_session)
 ):
     """
     Get user's active sessions.
@@ -460,11 +492,15 @@ async def get_user_sessions(
         )
 
 
+class RefreshTokenRequest(BaseModel):
+    """Refresh token request model."""
+    refresh_token: str = Field(..., description="Refresh token")
+
 @router.post("/refresh", response_model=TokenResponse)
 async def refresh_token(
-    refresh_token: str,
+    token_data: RefreshTokenRequest,
     request: Request,
-    db: AsyncSession = Depends(get_postgres_session)
+    db: AsyncSession = Depends(get_db_session)
 ):
     """
     Refresh access token using refresh token.
@@ -479,8 +515,23 @@ async def refresh_token(
     """
     try:
         # Verify refresh token
-        payload = verify_token(refresh_token, token_type="refresh")
-        user_id = int(payload.get("sub"))
+        payload = verify_token(token_data.refresh_token, token_type="refresh")
+        user_id_str = payload.get("sub")
+        
+        if user_id_str is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid refresh token"
+            )
+        
+        # Convert user_id from string to integer
+        try:
+            user_id = int(user_id_str)
+        except (ValueError, TypeError):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid refresh token"
+            )
         
         # Get user
         result = await db.execute(select(User).where(User.id == user_id))
@@ -496,7 +547,7 @@ async def refresh_token(
         session_result = await db.execute(
             select(UserSession).where(
                 UserSession.user_id == user_id,
-                UserSession.refresh_token == refresh_token,
+                UserSession.refresh_token == token_data.refresh_token,
                 UserSession.is_active == True
             )
         )
@@ -515,7 +566,7 @@ async def refresh_token(
         # Update session
         session.session_token = new_access_token
         session.refresh_token = new_refresh_token
-        session.expires_at = datetime.utcnow() + timedelta(minutes=30)  # Access token expiration
+        session.expires_at = datetime.now(timezone.utc) + timedelta(minutes=30)  # Access token expiration
         
         await db.commit()
         

@@ -11,7 +11,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from app.database import get_postgres_session
+from app.database import get_db_session
 from app.models.user import User, UserSession
 from app.utils.jwt import verify_token
 from app.models.schemas import UserResponse
@@ -55,7 +55,7 @@ class AuthMiddleware:
 
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: AsyncSession = Depends(get_postgres_session)
+    db: AsyncSession = Depends(get_db_session)
 ) -> User:
     """
     Get the current authenticated user from JWT token.
@@ -79,9 +79,15 @@ async def get_current_user(
     try:
         # Verify the JWT token
         payload = verify_token(credentials.credentials, token_type="access")
-        user_id: int = payload.get("sub")
+        user_id_str = payload.get("sub")
         
-        if user_id is None:
+        if user_id_str is None:
+            raise credentials_exception
+        
+        # Convert user_id from string to integer
+        try:
+            user_id = int(user_id_str)
+        except (ValueError, TypeError):
             raise credentials_exception
         
         # Get user from database
@@ -155,7 +161,7 @@ async def get_current_active_user(
 
 async def get_current_user_optional(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False)),
-    db: AsyncSession = Depends(get_postgres_session)
+    db: AsyncSession = Depends(get_db_session)
 ) -> Optional[User]:
     """
     Get the current user if authenticated, otherwise return None.

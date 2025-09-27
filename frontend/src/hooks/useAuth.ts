@@ -1,6 +1,13 @@
-// React Query hooks for authentication
+// Enhanced React Query hooks for robust authentication
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  QueryClient,
+} from "@tanstack/react-query";
+import { useNavigate } from "react-router";
+import { toast } from "sonner";
 import { apiClient } from "../services/api";
 import { tokenManager } from "../utils/tokenManager";
 import type {
@@ -18,13 +25,55 @@ export const authKeys = {
   sessions: () => [...authKeys.all, "sessions"] as const,
 };
 
-// Get current user
+// Enhanced error handler for auth failures
+const handleAuthError = (
+  error: any,
+  queryClient: QueryClient,
+  navigate?: ReturnType<typeof useNavigate>
+) => {
+  if (error?.status === 401 || error?.response?.status === 401) {
+    // Token is invalid, clear auth state
+    tokenManager.clearTokens();
+    queryClient.removeQueries({ queryKey: authKeys.user() });
+
+    if (navigate) {
+      navigate("/login", { replace: true });
+    }
+
+    toast.error("Session expired. Please log in again.");
+  }
+};
+
+// Get current user with robust error handling
 export const useCurrentUser = () => {
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+
   return useQuery({
     queryKey: authKeys.user(),
-    queryFn: () => apiClient.getCurrentUser(),
+    queryFn: async () => {
+      try {
+        // Check if token needs refresh before making request
+        if (tokenManager.needsRefresh()) {
+          await tokenManager.refreshAccessToken();
+        }
+        return await apiClient.getCurrentUser();
+      } catch (error) {
+        handleAuthError(error, queryClient, navigate);
+        throw error;
+      }
+    },
     enabled: tokenManager.isAuthenticated(),
     staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: (failureCount, error: any) => {
+      // Don't retry on auth errors
+      if (error?.status === 401 || error?.response?.status === 401) {
+        return false;
+      }
+      // Retry other errors up to 2 times
+      return failureCount < 2;
+    },
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 };
 
@@ -37,39 +86,125 @@ export const useUserSessions = () => {
   });
 };
 
-// Register mutation
+// Enhanced register mutation with optimistic updates and robust error handling
 export const useRegister = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (userData: UserRegisterRequest) => apiClient.register(userData),
-    onSuccess: (data) => {
-      // Store tokens using token manager
-      tokenManager.setTokens(data);
-      // Invalidate user query to refetch with new token
-      queryClient.invalidateQueries({ queryKey: authKeys.user() });
+    mutationFn: async (userData: UserRegisterRequest) => {
+      // Show optimistic loading state
+      toast.loading("Creating your account...", { id: "register" });
+      return await apiClient.register(userData);
     },
-    onError: (error) => {
+    onSuccess: async (data) => {
+      try {
+        // Store tokens using token manager
+        tokenManager.setTokens(data);
+
+        // Optimistically set the user data
+        queryClient.setQueryData(authKeys.user(), data.user);
+
+        // Ensure the user query is properly cached
+        await queryClient.ensureQueryData({
+          queryKey: authKeys.user(),
+          queryFn: () => apiClient.getCurrentUser(),
+        });
+
+        toast.success("Registration successful! Welcome aboard!", {
+          id: "register",
+        });
+      } catch (error) {
+        console.error("Post-registration setup failed:", error);
+        toast.error(
+          "Registration completed but there was an issue. Please try logging in.",
+          { id: "register" }
+        );
+      }
+    },
+    onError: (error: any) => {
       console.error("Registration failed:", error);
+
+      let errorMessage = "Registration failed. Please try again.";
+
+      if (error?.response?.data?.detail) {
+        errorMessage = error.response.data.detail;
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+
+      toast.error(errorMessage, { id: "register" });
     },
+    // Add retry logic for network failures
+    retry: (failureCount, error: any) => {
+      // Don't retry on client errors (4xx)
+      if (error?.response?.status >= 400 && error?.response?.status < 500) {
+        return false;
+      }
+      // Retry server errors up to 2 times
+      return failureCount < 2;
+    },
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
   });
 };
 
-// Login mutation
+// Enhanced login mutation with optimistic updates and robust error handling
 export const useLogin = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (credentials: UserLoginRequest) => apiClient.login(credentials),
-    onSuccess: (data) => {
-      // Store tokens using token manager
-      tokenManager.setTokens(data);
-      // Invalidate user query to refetch with new token
-      queryClient.invalidateQueries({ queryKey: authKeys.user() });
+    mutationFn: async (credentials: UserLoginRequest) => {
+      // Show optimistic loading state
+      toast.loading("Signing you in...", { id: "login" });
+      return await apiClient.login(credentials);
     },
-    onError: (error) => {
+    onSuccess: async (data) => {
+      try {
+        // Store tokens using token manager
+        tokenManager.setTokens(data);
+
+        // Optimistically set the user data
+        queryClient.setQueryData(authKeys.user(), data.user);
+
+        // Ensure the user query is properly cached
+        await queryClient.ensureQueryData({
+          queryKey: authKeys.user(),
+          queryFn: () => apiClient.getCurrentUser(),
+        });
+
+        toast.success("Welcome back!", { id: "login" });
+      } catch (error) {
+        console.error("Post-login setup failed:", error);
+        toast.error(
+          "Login completed but there was an issue. Please refresh the page.",
+          { id: "login" }
+        );
+      }
+    },
+    onError: (error: any) => {
       console.error("Login failed:", error);
+
+      let errorMessage = "Invalid email or password.";
+
+      if (error?.response?.data?.detail) {
+        errorMessage = error.response.data.detail;
+      } else if (error?.response?.status === 401) {
+        errorMessage = "Invalid email or password.";
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+
+      toast.error(errorMessage, { id: "login" });
     },
+    // Add retry logic for network failures
+    retry: (failureCount, error: any) => {
+      // Don't retry on client errors (4xx)
+      if (error?.response?.status >= 400 && error?.response?.status < 500) {
+        return false;
+      }
+      // Retry server errors up to 2 times
+      return failureCount < 2;
+    },
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
   });
 };
 
