@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     # Application settings
     app_name: str = "Financial Document Analyzer API"
     app_version: str = "1.0.0"
-    debug: bool = False
+    debug: bool = True
     
     # Server settings
     host: str = "0.0.0.0"

@@ -122,6 +122,10 @@
 4. **Error Handling**: Frontend error handling not implemented
 5. **Performance**: No optimization for large file processing
 
+### Recently Fixed Issues
+
+1. **Documentation Endpoints**: Fixed 404 errors for `/docs` and `/redoc` by enabling debug mode in configuration
+
 ## Next Milestones 🎯
 
 ### Milestone 1: Database Integration (Week 1-2)
