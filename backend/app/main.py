@@ -11,6 +11,7 @@ from datetime import datetime
 from app.config import settings
 from app.routers import health, documents, analytics
 from app.models.schemas import ErrorResponse
+from app.database import init_databases, close_databases
 
 # Configure logging
 logging.basicConfig(
@@ -144,6 +145,15 @@ async def startup_event():
     logger.info(f"Starting {settings.app_name} v{settings.app_version}")
     logger.info(f"Debug mode: {settings.debug}")
     logger.info(f"Server will run on {settings.host}:{settings.port}")
+    
+    # Initialize database connections
+    try:
+        await init_databases()
+        logger.info("Database connections initialized successfully")
+    except Exception as e:
+        logger.error(f"Failed to initialize database connections: {e}")
+        # Don't raise here to allow the app to start even if DB is unavailable
+        # This is useful for development and testing
 
 
 # Shutdown event
@@ -151,6 +161,13 @@ async def startup_event():
 async def shutdown_event():
     """Application shutdown event."""
     logger.info("Shutting down Financial Document Analyzer API")
+    
+    # Close database connections
+    try:
+        await close_databases()
+        logger.info("Database connections closed successfully")
+    except Exception as e:
+        logger.error(f"Error closing database connections: {e}")
 
 
 if __name__ == "__main__":
