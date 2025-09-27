@@ -19,6 +19,7 @@ const Home: React.FC = () => {
       await logout();
       toast.success("Logged out successfully");
       navigate("/login", { replace: true });
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       toast.error("Logout failed");
     }

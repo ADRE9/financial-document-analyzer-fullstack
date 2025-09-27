@@ -85,6 +85,7 @@ const Register = () => {
 
   const onSubmit = async (data: RegisterFormData) => {
     try {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { confirmPassword: _, ...registerData } = data;
       await registerMutation.mutateAsync(registerData);
       // Success handling is now done in the mutation hook with optimistic updates
