@@ -27,6 +27,8 @@ This is a full-stack financial document analyzer built with FastAPI (Python) bac
 - **Type Safety**: Strong TypeScript typing throughout
 - **Build System**: Vite for fast development and building
 - **State Management**: React hooks (no external state management yet)
+- **React Version**: React 19 with latest best practices
+- **Modern Patterns**: Functional components, hooks, context API
 
 ## Key Implementation Details
 
@@ -112,6 +114,12 @@ pnpm dev
 - Implement proper error boundaries
 - Use Radix UI for accessible components
 - Follow React hooks patterns for state management
+- **React 19 Compliance**: Follow latest React documentation patterns
+- **Component Patterns**: Use functional components, avoid React.FC
+- **Import Patterns**: Use named imports, avoid default React import
+- **Hook Rules**: Follow rules of hooks (only at top level, only in React functions)
+- **Context Patterns**: Use createContext with proper TypeScript typing
+- **Performance**: Use useMemo, useCallback for expensive operations
 
 ## Common Patterns
 
@@ -150,6 +158,195 @@ pnpm dev
 3. Create API service layer in frontend
 4. Add pytest for backend, Jest for frontend
 
+## React 19 Best Practices & Compliance
+
+### Component Patterns
+
+1. **Functional Components Only**
+
+   ```tsx
+   // ✅ Good - Modern functional component
+   const MyComponent = ({ children }: Props) => {
+     return <div>{children}</div>;
+   };
+
+   // ❌ Avoid - React.FC is discouraged
+   const MyComponent: React.FC<Props> = ({ children }) => {
+     return <div>{children}</div>;
+   };
+   ```
+
+2. **Import Patterns**
+
+   ```tsx
+   // ✅ Good - Named imports only
+   import { useState, useEffect } from "react";
+   import type { ReactNode } from "react";
+
+   // ❌ Avoid - Default React import (unnecessary in React 17+)
+   import React, { useState, useEffect } from "react";
+   ```
+
+3. **Hook Usage**
+
+   ```tsx
+   // ✅ Good - Hooks at top level
+   const MyComponent = () => {
+     const [state, setState] = useState(initialValue);
+     const { data, isLoading } = useQuery();
+
+     useEffect(() => {
+       // side effects
+     }, []);
+
+     return <div>Content</div>;
+   };
+   ```
+
+4. **Context Patterns**
+
+   ```tsx
+   // ✅ Good - Proper context with TypeScript
+   interface ContextType {
+     value: string;
+     setValue: (value: string) => void;
+   }
+
+   const MyContext = createContext<ContextType | undefined>(undefined);
+
+   export const MyProvider = ({ children }: { children: ReactNode }) => {
+     const [value, setValue] = useState("");
+     return (
+       <MyContext.Provider value={{ value, setValue }}>
+         {children}
+       </MyContext.Provider>
+     );
+   };
+   ```
+
+5. **Custom Hooks**
+   ```tsx
+   // ✅ Good - Custom hook with proper error handling
+   export const useAuth = () => {
+     const context = useContext(AuthContext);
+     if (context === undefined) {
+       throw new Error("useAuth must be used within an AuthProvider");
+     }
+     return context;
+   };
+   ```
+
+### Performance Optimization
+
+1. **Memoization**
+
+   ```tsx
+   // ✅ Use useMemo for expensive calculations
+   const expensiveValue = useMemo(() => {
+     return heavyCalculation(data);
+   }, [data]);
+
+   // ✅ Use useCallback for stable function references
+   const handleClick = useCallback(() => {
+     doSomething();
+   }, [dependency]);
+   ```
+
+2. **Component Optimization**
+   ```tsx
+   // ✅ Memo for preventing unnecessary re-renders
+   const ExpensiveComponent = memo(({ data }: Props) => {
+     return <div>{data}</div>;
+   });
+   ```
+
+### Error Handling
+
+1. **Error Boundaries**
+
+   ```tsx
+   // ✅ Error boundary for catching component errors
+   class ErrorBoundary extends Component<Props, State> {
+     constructor(props: Props) {
+       super(props);
+       this.state = { hasError: false };
+     }
+
+     static getDerivedStateFromError(error: Error): State {
+       return { hasError: true };
+     }
+
+     componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+       console.error("Error caught by boundary:", error, errorInfo);
+     }
+
+     render() {
+       if (this.state.hasError) {
+         return <h1>Something went wrong.</h1>;
+       }
+       return this.props.children;
+     }
+   }
+   ```
+
+2. **Async Error Handling**
+   ```tsx
+   // ✅ Proper async error handling in effects
+   useEffect(() => {
+     const fetchData = async () => {
+       try {
+         const result = await api.getData();
+         setData(result);
+       } catch (error) {
+         setError(error instanceof Error ? error.message : "Unknown error");
+       }
+     };
+
+     fetchData();
+   }, []);
+   ```
+
+### TypeScript Integration
+
+1. **Component Props**
+
+   ```tsx
+   // ✅ Proper TypeScript interfaces
+   interface ButtonProps {
+     children: ReactNode;
+     onClick?: () => void;
+     variant?: "primary" | "secondary";
+     disabled?: boolean;
+   }
+
+   const Button = ({
+     children,
+     onClick,
+     variant = "primary",
+     disabled,
+   }: ButtonProps) => {
+     return (
+       <button onClick={onClick} disabled={disabled}>
+         {children}
+       </button>
+     );
+   };
+   ```
+
+2. **Event Handlers**
+
+   ```tsx
+   // ✅ Proper event typing
+   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
+     setValue(event.target.value);
+   };
+
+   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+     event.preventDefault();
+     // handle submit
+   };
+   ```
+
 ## Development Notes
 
 - Always check memory bank files for current context
@@ -157,3 +354,5 @@ pnpm dev
 - Follow the established patterns for consistency
 - Test thoroughly before marking tasks complete
 - Document any new patterns or decisions in .cursorrules
+- **React Compliance**: Ensure all components follow React 19 best practices
+- **Code Review**: Check for React.FC usage, unnecessary React imports, hook violations

@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "../services/api";
+import { tokenManager } from "../utils/tokenManager";
 import type {
   UserRegisterRequest,
   UserLoginRequest,
@@ -22,7 +23,7 @@ export const useCurrentUser = () => {
   return useQuery({
     queryKey: authKeys.user(),
     queryFn: () => apiClient.getCurrentUser(),
-    enabled: !!localStorage.getItem("access_token"),
+    enabled: tokenManager.isAuthenticated(),
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 };
@@ -32,7 +33,7 @@ export const useUserSessions = () => {
   return useQuery({
     queryKey: authKeys.sessions(),
     queryFn: () => apiClient.getUserSessions(),
-    enabled: !!localStorage.getItem("access_token"),
+    enabled: tokenManager.isAuthenticated(),
   });
 };
 
@@ -43,9 +44,8 @@ export const useRegister = () => {
   return useMutation({
     mutationFn: (userData: UserRegisterRequest) => apiClient.register(userData),
     onSuccess: (data) => {
-      // Store tokens
-      localStorage.setItem("access_token", data.access_token);
-      localStorage.setItem("refresh_token", data.refresh_token);
+      // Store tokens using token manager
+      tokenManager.setTokens(data);
       // Invalidate user query to refetch with new token
       queryClient.invalidateQueries({ queryKey: authKeys.user() });
     },
@@ -62,9 +62,8 @@ export const useLogin = () => {
   return useMutation({
     mutationFn: (credentials: UserLoginRequest) => apiClient.login(credentials),
     onSuccess: (data) => {
-      // Store tokens
-      localStorage.setItem("access_token", data.access_token);
-      localStorage.setItem("refresh_token", data.refresh_token);
+      // Store tokens using token manager
+      tokenManager.setTokens(data);
       // Invalidate user query to refetch with new token
       queryClient.invalidateQueries({ queryKey: authKeys.user() });
     },
@@ -82,17 +81,15 @@ export const useLogout = () => {
     mutationFn: (logoutData: LogoutRequest = {}) =>
       apiClient.logout(logoutData),
     onSuccess: () => {
-      // Clear tokens
-      localStorage.removeItem("access_token");
-      localStorage.removeItem("refresh_token");
+      // Clear tokens using token manager
+      tokenManager.clearTokens();
       // Clear all queries
       queryClient.clear();
     },
     onError: (error) => {
       console.error("Logout failed:", error);
       // Clear tokens even on error
-      localStorage.removeItem("access_token");
-      localStorage.removeItem("refresh_token");
+      tokenManager.clearTokens();
       queryClient.clear();
     },
   });

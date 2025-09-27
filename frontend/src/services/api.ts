@@ -15,6 +15,7 @@ import type {
   LogoutRequest,
   UserSessionsResponse,
 } from "../types/api";
+import { tokenManager } from "../utils/tokenManager";
 
 // API Configuration
 const API_BASE_URL =
@@ -39,9 +40,9 @@ class ApiClient {
     };
 
     // Add authorization header if token exists
-    const token = localStorage.getItem("access_token");
-    if (token) {
-      defaultHeaders["Authorization"] = `Bearer ${token}`;
+    const authHeader = tokenManager.getAuthHeader();
+    if (authHeader) {
+      defaultHeaders["Authorization"] = authHeader;
     }
 
     const config: RequestInit = {
@@ -54,6 +55,42 @@ class ApiClient {
 
     try {
       const response = await fetch(url, config);
+
+      // Handle 401 Unauthorized - try to refresh token
+      if (response.status === 401 && tokenManager.isAuthenticated()) {
+        try {
+          const newAccessToken = await tokenManager.refreshAccessToken();
+
+          // Retry the request with the new token
+          const retryConfig: RequestInit = {
+            ...config,
+            headers: {
+              ...config.headers,
+              Authorization: `Bearer ${newAccessToken}`,
+            },
+          };
+
+          const retryResponse = await fetch(url, retryConfig);
+
+          if (!retryResponse.ok) {
+            const errorData: ErrorResponse = await retryResponse.json();
+            throw new Error(
+              errorData.detail || errorData.error || "An error occurred"
+            );
+          }
+
+          // Handle empty responses (like 204 No Content)
+          if (retryResponse.status === 204) {
+            return {} as T;
+          }
+
+          return await retryResponse.json();
+        } catch (refreshError) {
+          // If refresh fails, clear tokens and throw original error
+          tokenManager.clearTokens();
+          throw new Error("Session expired. Please log in again.");
+        }
+      }
 
       if (!response.ok) {
         const errorData: ErrorResponse = await response.json();
