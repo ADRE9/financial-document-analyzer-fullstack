@@ -1,0 +1,157 @@
+# Financial Document Analyzer - Project Intelligence
+
+## Project Overview
+
+This is a full-stack financial document analyzer built with FastAPI (Python) backend and React (TypeScript) frontend. The system processes financial documents (invoices, receipts, statements, contracts) and extracts structured data using AI/ML capabilities.
+
+## Current Status
+
+- **Phase**: Database setup and core integration
+- **Branch**: `feat/db-setup`
+- **Completion**: ~30% (infrastructure complete, core features pending)
+- **Key Issue**: All endpoints return mock data, no database integration yet
+
+## Architecture Patterns
+
+### Backend (FastAPI)
+
+- **Router Pattern**: Each domain (health, documents, analytics) has its own router
+- **Pydantic Models**: All request/response validation using Pydantic schemas
+- **Middleware Stack**: CORS, logging, exception handling, trusted hosts
+- **Error Handling**: Centralized exception handlers with consistent error responses
+- **Configuration**: Pydantic Settings for environment-based configuration
+
+### Frontend (React + TypeScript)
+
+- **Component Architecture**: Radix UI components with Tailwind CSS
+- **Type Safety**: Strong TypeScript typing throughout
+- **Build System**: Vite for fast development and building
+- **State Management**: React hooks (no external state management yet)
+
+## Key Implementation Details
+
+### API Endpoints
+
+- `GET /` - API information
+- `GET /health` - Health check with system status
+- `GET /documents/` - List documents (currently mock data)
+- `POST /documents/upload` - Upload with file validation (10MB limit, specific file types)
+- `GET /documents/{id}` - Get document details (currently mock data)
+- `DELETE /documents/{id}` - Delete documents (currently mock data)
+
+### Data Models
+
+- **DocumentType**: Enum (invoice, receipt, statement, contract, other)
+- **DocumentUploadRequest**: Upload request with metadata
+- **DocumentAnalysisResponse**: Analysis results with confidence score
+- **ErrorResponse**: Standardized error format with timestamp
+
+### File Handling
+
+- **Supported Types**: PDF, PNG, JPG, JPEG, TIFF
+- **Size Limit**: 10MB per document
+- **Validation**: File type and size validation implemented
+- **Processing**: Upload handling complete, analysis engine pending
+
+## Development Workflow
+
+### Backend Development
+
+```bash
+cd backend
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload
+```
+
+### Frontend Development
+
+```bash
+cd frontend
+pnpm install
+pnpm dev
+```
+
+### Ports
+
+- Backend: http://localhost:8000
+- Frontend: http://localhost:5173
+- API Docs: http://localhost:8000/docs (when debug=True)
+
+## Critical Next Steps
+
+### Immediate Priorities
+
+1. **Database Integration**: Set up PostgreSQL with SQLAlchemy models
+2. **Document Processing**: Integrate OCR library (Tesseract/PaddleOCR)
+3. **Frontend Integration**: Connect React to real API endpoints
+4. **Testing**: Add comprehensive test suite
+
+### Technical Decisions Needed
+
+- **Database**: PostgreSQL for production, SQLite for development
+- **OCR Engine**: Tesseract vs PaddleOCR vs cloud-based solutions
+- **Document Processing**: Sync vs async processing for large files
+- **Authentication**: JWT implementation strategy
+
+## Code Quality Standards
+
+### Backend
+
+- Use Pydantic for all data validation
+- Implement proper error handling with HTTP status codes
+- Add comprehensive logging for debugging
+- Follow FastAPI best practices for async operations
+
+### Frontend
+
+- Use TypeScript for all components and functions
+- Implement proper error boundaries
+- Use Radix UI for accessible components
+- Follow React hooks patterns for state management
+
+## Common Patterns
+
+### Error Handling
+
+- Backend: Use HTTPException with proper status codes
+- Frontend: Implement error boundaries and user feedback
+- Logging: Use structured logging with timestamps
+
+### Data Validation
+
+- Backend: Pydantic models with field validation
+- Frontend: Form validation with React Hook Form + Zod
+- File Upload: Validate type, size, and content
+
+### API Design
+
+- RESTful endpoints with proper HTTP methods
+- Consistent response format (SuccessResponse, ErrorResponse)
+- Proper status codes and error messages
+- Request/response logging for debugging
+
+## Known Issues & Solutions
+
+### Current Issues
+
+1. **Mock Data**: All endpoints return mock data - need database integration
+2. **File Processing**: Upload works but no analysis - need OCR integration
+3. **Frontend Integration**: No API calls - need service layer
+4. **Testing**: No tests - need comprehensive test suite
+
+### Solutions
+
+1. Implement SQLAlchemy models and database operations
+2. Integrate OCR library and create analysis pipeline
+3. Create API service layer in frontend
+4. Add pytest for backend, Jest for frontend
+
+## Development Notes
+
+- Always check memory bank files for current context
+- Update progress.md after significant changes
+- Follow the established patterns for consistency
+- Test thoroughly before marking tasks complete
+- Document any new patterns or decisions in .cursorrules

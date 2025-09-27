@@ -11,6 +11,7 @@ from datetime import datetime
 from app.config import settings
 from app.routers import health, documents, analytics
 from app.models.schemas import ErrorResponse
+from app.database import init_databases, close_databases
 
 # Configure logging
 logging.basicConfig(
@@ -84,7 +85,7 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
             error=f"HTTP {exc.status_code}",
             detail=exc.detail,
             timestamp=datetime.utcnow()
-        ).model_dump()
+        ).model_dump(mode='json')
     )
 
 
@@ -99,7 +100,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
             error="Validation Error",
             detail="Invalid request data",
             timestamp=datetime.utcnow()
-        ).model_dump()
+        ).model_dump(mode='json')
     )
 
 
@@ -114,7 +115,7 @@ async def general_exception_handler(request: Request, exc: Exception):
             error="Internal Server Error",
             detail="An unexpected error occurred",
             timestamp=datetime.utcnow()
-        ).model_dump()
+        ).model_dump(mode='json')
     )
 
 
@@ -133,7 +134,7 @@ async def root():
         "version": settings.app_version,
         "docs_url": "/docs" if settings.debug else "Documentation disabled in production",
         "health_check": "/health",
-        "timestamp": datetime.utcnow()
+        "timestamp": datetime.utcnow().isoformat()
     }
 
 
@@ -144,6 +145,15 @@ async def startup_event():
     logger.info(f"Starting {settings.app_name} v{settings.app_version}")
     logger.info(f"Debug mode: {settings.debug}")
     logger.info(f"Server will run on {settings.host}:{settings.port}")
+    
+    # Initialize database connections
+    try:
+        await init_databases()
+        logger.info("Database connections initialized successfully")
+    except Exception as e:
+        logger.error(f"Failed to initialize database connections: {e}")
+        # Don't raise here to allow the app to start even if DB is unavailable
+        # This is useful for development and testing
 
 
 # Shutdown event
@@ -151,6 +161,13 @@ async def startup_event():
 async def shutdown_event():
     """Application shutdown event."""
     logger.info("Shutting down Financial Document Analyzer API")
+    
+    # Close database connections
+    try:
+        await close_databases()
+        logger.info("Database connections closed successfully")
+    except Exception as e:
+        logger.error(f"Error closing database connections: {e}")
 
 
 if __name__ == "__main__":

@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 from enum import Enum
@@ -12,6 +12,8 @@ class HealthStatus(str, Enum):
 
 class HealthResponse(BaseModel):
     """Health check response model."""
+    model_config = ConfigDict(json_encoders={datetime: lambda v: v.isoformat()})
+    
     status: HealthStatus
     message: str
     timestamp: datetime
@@ -36,6 +38,8 @@ class DocumentUploadRequest(BaseModel):
 
 class DocumentAnalysisResponse(BaseModel):
     """Document analysis response model."""
+    model_config = ConfigDict(json_encoders={datetime: lambda v: v.isoformat()})
+    
     document_id: str
     filename: str
     document_type: DocumentType
@@ -47,6 +51,8 @@ class DocumentAnalysisResponse(BaseModel):
 
 class ErrorResponse(BaseModel):
     """Error response model."""
+    model_config = ConfigDict(json_encoders={datetime: lambda v: v.isoformat()})
+    
     error: str
     detail: Optional[str] = None
     timestamp: datetime
@@ -54,6 +60,8 @@ class ErrorResponse(BaseModel):
 
 class SuccessResponse(BaseModel):
     """Success response model."""
+    model_config = ConfigDict(json_encoders={datetime: lambda v: v.isoformat()})
+    
     message: str
     data: Optional[Dict[str, Any]] = None
     timestamp: datetime

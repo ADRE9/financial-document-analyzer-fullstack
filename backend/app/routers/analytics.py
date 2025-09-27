@@ -40,7 +40,7 @@ async def get_analytics_overview(logger=Depends(get_logger)):
             "medium_confidence": 0.13,  # 0.7-0.9
             "low_confidence": 0.02   # < 0.7
         },
-        "last_updated": datetime.utcnow()
+        "last_updated": datetime.utcnow().isoformat()
     }
     
     return mock_overview
@@ -110,7 +110,7 @@ async def get_performance_metrics(logger=Depends(get_logger)):
             "memory_usage_percentage": 60.2,
             "disk_usage_percentage": 35.8
         },
-        "last_updated": datetime.utcnow()
+        "last_updated": datetime.utcnow().isoformat()
     }
     
     return mock_performance
@@ -158,7 +158,7 @@ async def get_document_type_analytics(logger=Depends(get_logger)):
                 "common_vendors": ["Various"]
             }
         },
-        "last_updated": datetime.utcnow()
+        "last_updated": datetime.utcnow().isoformat()
     }
     
     return mock_type_analytics
