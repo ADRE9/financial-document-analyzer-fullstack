@@ -84,7 +84,7 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
             error=f"HTTP {exc.status_code}",
             detail=exc.detail,
             timestamp=datetime.utcnow()
-        ).model_dump()
+        ).model_dump(mode='json')
     )
 
 
@@ -99,7 +99,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
             error="Validation Error",
             detail="Invalid request data",
             timestamp=datetime.utcnow()
-        ).model_dump()
+        ).model_dump(mode='json')
     )
 
 
@@ -114,7 +114,7 @@ async def general_exception_handler(request: Request, exc: Exception):
             error="Internal Server Error",
             detail="An unexpected error occurred",
             timestamp=datetime.utcnow()
-        ).model_dump()
+        ).model_dump(mode='json')
     )
 
 
@@ -133,7 +133,7 @@ async def root():
         "version": settings.app_version,
         "docs_url": "/docs" if settings.debug else "Documentation disabled in production",
         "health_check": "/health",
-        "timestamp": datetime.utcnow()
+        "timestamp": datetime.utcnow().isoformat()
     }
 
 

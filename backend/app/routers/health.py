@@ -34,7 +34,7 @@ async def readiness_check(logger=Depends(get_logger)):
     return {
         "status": "ready",
         "message": "API is ready to serve requests",
-        "timestamp": datetime.utcnow()
+        "timestamp": datetime.utcnow().isoformat()
     }
 
 
@@ -48,5 +48,5 @@ async def liveness_check(logger=Depends(get_logger)):
     return {
         "status": "alive",
         "message": "API process is alive",
-        "timestamp": datetime.utcnow()
+        "timestamp": datetime.utcnow().isoformat()
     }
