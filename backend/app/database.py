@@ -9,12 +9,12 @@ import logging
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator, Optional
 
-import redis.asyncio as redis
 from sqlalchemy import create_engine, text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.config import settings
+from app.models import Base
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -22,7 +22,6 @@ logger = logging.getLogger(__name__)
 # Global database instances
 postgres_engine = None
 postgres_async_engine = None
-redis_client = None
 
 
 def init_postgres_engine():
@@ -54,42 +53,40 @@ def init_postgres_engine():
         raise
 
 
-def init_redis_client():
-    """Initialize Redis client."""
-    global redis_client
-    
-    try:
-        redis_client = redis.from_url(
-            settings.redis_connection_url,
-            encoding="utf-8",
-            decode_responses=True,
-            socket_connect_timeout=5,
-            socket_timeout=5,
-            retry_on_timeout=True,
-        )
-        logger.info("Redis client initialized successfully")
-        
-    except Exception as e:
-        logger.error(f"Failed to initialize Redis client: {e}")
-        raise
-
-
 async def init_databases():
-    """Initialize all database connections."""
+    """Initialize database connections and create tables."""
     logger.info("Initializing database connections...")
     
     try:
+        # Initialize PostgreSQL
         init_postgres_engine()
-        init_redis_client()
-        
-        # Test connections
         await test_postgres_connection()
-        await test_redis_connection()
+        logger.info("PostgreSQL connection initialized successfully")
         
-        logger.info("All database connections initialized successfully")
+        # Create tables
+        await create_tables()
+        logger.info("Database tables created successfully")
+        
+        logger.info("Database connections initialized successfully")
         
     except Exception as e:
         logger.error(f"Failed to initialize databases: {e}")
+        raise
+
+
+async def create_tables():
+    """Create database tables."""
+    if not postgres_async_engine:
+        raise Exception("PostgreSQL async engine not initialized")
+    
+    try:
+        async with postgres_async_engine.begin() as conn:
+            # Create all tables defined in models
+            await conn.run_sync(Base.metadata.create_all)
+        logger.info("Database tables created successfully")
+        
+    except Exception as e:
+        logger.error(f"Failed to create database tables: {e}")
         raise
 
 
@@ -109,22 +106,8 @@ async def test_postgres_connection():
         raise
 
 
-async def test_redis_connection():
-    """Test Redis connection."""
-    if not redis_client:
-        raise Exception("Redis client not initialized")
-    
-    try:
-        await redis_client.ping()
-        logger.info("Redis connection test successful")
-        
-    except Exception as e:
-        logger.error(f"Redis connection test failed: {e}")
-        raise
-
-
 async def close_databases():
-    """Close all database connections."""
+    """Close database connections."""
     logger.info("Closing database connections...")
     
     try:
@@ -136,11 +119,7 @@ async def close_databases():
             postgres_engine.dispose()
             logger.info("PostgreSQL engine closed")
         
-        if redis_client:
-            await redis_client.close()
-            logger.info("Redis client closed")
-        
-        logger.info("All database connections closed successfully")
+        logger.info("Database connections closed successfully")
         
     except Exception as e:
         logger.error(f"Error closing database connections: {e}")
@@ -169,13 +148,6 @@ async def get_postgres_session() -> AsyncGenerator[AsyncSession, None]:
             await session.close()
 
 
-def get_redis_client() -> redis.Redis:
-    """Get Redis client instance."""
-    if not redis_client:
-        raise Exception("Redis client not initialized")
-    return redis_client
-
-
 # Health check functions
 async def check_postgres_health() -> dict:
     """Check PostgreSQL health status."""
@@ -193,31 +165,11 @@ async def check_postgres_health() -> dict:
         return {"status": "error", "message": f"PostgreSQL connection failed: {str(e)}"}
 
 
-async def check_redis_health() -> dict:
-    """Check Redis health status."""
-    try:
-        if not redis_client:
-            return {"status": "error", "message": "Redis client not initialized"}
-        
-        await redis_client.ping()
-        return {"status": "healthy", "message": "Redis connection successful"}
-        
-    except Exception as e:
-        return {"status": "error", "message": f"Redis connection failed: {str(e)}"}
-
-
 async def get_database_health() -> dict:
-    """Get overall database health status."""
+    """Get database health status."""
     postgres_health = await check_postgres_health()
-    redis_health = await check_redis_health()
-    
-    overall_status = "healthy" if (
-        postgres_health["status"] == "healthy" and 
-        redis_health["status"] == "healthy"
-    ) else "unhealthy"
     
     return {
-        "status": overall_status,
-        "postgres": postgres_health,
-        "redis": redis_health
+        "status": postgres_health["status"],
+        "postgres": postgres_health
     }

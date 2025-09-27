@@ -15,9 +15,10 @@ class Settings(BaseSettings):
     port: int = 8000
     
     # Security settings
-    secret_key: str = "your-secret-key-change-in-production"
+    secret_key: str = "your-secret-key-change-in-production-please-change-this-in-production"
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
+    refresh_token_expire_days: int = 30
     
     # PostgreSQL Database settings
     postgres_host: str = "localhost"
@@ -27,12 +28,6 @@ class Settings(BaseSettings):
     postgres_db: str = "financial_docs"
     postgres_url: Optional[str] = None
     
-    # Redis settings
-    redis_host: str = "localhost"
-    redis_port: int = 6379
-    redis_password: Optional[str] = None
-    redis_db: int = 0
-    redis_url: Optional[str] = None
     
     # CORS settings
     allowed_origins: list[str] = ["http://localhost:3000", "http://localhost:5173"]
@@ -44,13 +39,6 @@ class Settings(BaseSettings):
             return self.postgres_url
         return f"postgresql://{self.postgres_user}:{self.postgres_password}@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
     
-    @property
-    def redis_connection_url(self) -> str:
-        """Generate Redis connection URL from individual components."""
-        if self.redis_url:
-            return self.redis_url
-        auth_part = f":{self.redis_password}@" if self.redis_password else ""
-        return f"redis://{auth_part}{self.redis_host}:{self.redis_port}/{self.redis_db}"
     
     class Config:
         env_file = ".env"

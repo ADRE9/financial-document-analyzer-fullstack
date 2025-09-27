@@ -9,7 +9,7 @@ import time
 from datetime import datetime
 
 from app.config import settings
-from app.routers import health, documents, analytics
+from app.routers import health, documents, analytics, auth, protected, auth_test
 from app.models.schemas import ErrorResponse
 from app.database import init_databases, close_databases
 
@@ -123,6 +123,9 @@ async def general_exception_handler(request: Request, exc: Exception):
 app.include_router(health.router)
 app.include_router(documents.router)
 app.include_router(analytics.router)
+app.include_router(auth.router)
+app.include_router(protected.router)
+app.include_router(auth_test.router)
 
 
 # Root endpoint

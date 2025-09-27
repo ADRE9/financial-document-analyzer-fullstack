@@ -1,0 +1,10 @@
+# Optional dependencies for enhanced features
+
+# OCR libraries (optional - choose one)
+# tesseract-ocr>=0.1.0  # Uncomment if using Tesseract
+# paddlepaddle>=2.5.0   # Uncomment if using PaddleOCR
+# paddleocr>=2.7.0      # Uncomment if using PaddleOCR
+
+# Additional image processing (optional)
+# Pillow>=10.0.0
+# opencv-python>=4.8.0
