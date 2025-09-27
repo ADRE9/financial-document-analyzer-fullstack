@@ -126,13 +126,56 @@ export const useRegister = () => {
 
       let errorMessage = "Registration failed. Please try again.";
 
+      // Handle specific error cases with user-friendly messages
       if (error?.response?.data?.detail) {
-        errorMessage = error.response.data.detail;
+        const detail = error.response.data.detail;
+
+        // Map backend error messages to user-friendly messages
+        if (detail.includes("Username already registered")) {
+          errorMessage =
+            "This username is already taken. Please choose a different one.";
+        } else if (detail.includes("Email already registered")) {
+          errorMessage =
+            "An account with this email already exists. Please use a different email or try logging in.";
+        } else if (detail.includes("Username or email already exists")) {
+          errorMessage =
+            "This username or email is already registered. Please use different credentials.";
+        } else if (detail.includes("Registration failed")) {
+          errorMessage =
+            "Registration failed due to a server error. Please try again in a few moments.";
+        } else if (detail.includes("Password")) {
+          errorMessage =
+            "Password doesn't meet requirements. Please check the password criteria.";
+        } else if (detail.includes("Email")) {
+          errorMessage = "Please enter a valid email address.";
+        } else if (detail.includes("Username")) {
+          errorMessage =
+            "Username must be 3-20 characters and contain only letters, numbers, underscores, and hyphens.";
+        } else {
+          // Use the backend message if it's user-friendly
+          errorMessage = detail;
+        }
       } else if (error?.message) {
-        errorMessage = error.message;
+        // Handle network and other errors
+        if (
+          error.message.includes("Network error") ||
+          error.message.includes("Failed to fetch")
+        ) {
+          errorMessage =
+            "Unable to connect to the server. Please check your internet connection and try again.";
+        } else if (error.message.includes("Session expired")) {
+          errorMessage =
+            "Your session has expired. Please refresh the page and try again.";
+        } else {
+          errorMessage = error.message;
+        }
       }
 
-      toast.error(errorMessage, { id: "register" });
+      toast.error(errorMessage, {
+        id: "register",
+        duration: 5000, // Show for 5 seconds
+        description: "Please check your information and try again.",
+      });
     },
     // Add retry logic for network failures
     retry: (failureCount, error: any) => {
@@ -185,15 +228,48 @@ export const useLogin = () => {
 
       let errorMessage = "Invalid email or password.";
 
+      // Handle specific error cases with user-friendly messages
       if (error?.response?.data?.detail) {
-        errorMessage = error.response.data.detail;
+        const detail = error.response.data.detail;
+
+        if (detail.includes("Incorrect email or password")) {
+          errorMessage =
+            "Invalid email or password. Please check your credentials and try again.";
+        } else if (detail.includes("Account is deactivated")) {
+          errorMessage =
+            "Your account has been deactivated. Please contact support for assistance.";
+        } else if (detail.includes("Login failed")) {
+          errorMessage =
+            "Login failed due to a server error. Please try again in a few moments.";
+        } else if (detail.includes("Invalid refresh token")) {
+          errorMessage = "Your session has expired. Please log in again.";
+        } else {
+          errorMessage = detail;
+        }
       } else if (error?.response?.status === 401) {
-        errorMessage = "Invalid email or password.";
+        errorMessage =
+          "Invalid email or password. Please check your credentials and try again.";
       } else if (error?.message) {
-        errorMessage = error.message;
+        // Handle network and other errors
+        if (
+          error.message.includes("Network error") ||
+          error.message.includes("Failed to fetch")
+        ) {
+          errorMessage =
+            "Unable to connect to the server. Please check your internet connection and try again.";
+        } else if (error.message.includes("Session expired")) {
+          errorMessage =
+            "Your session has expired. Please refresh the page and try again.";
+        } else {
+          errorMessage = error.message;
+        }
       }
 
-      toast.error(errorMessage, { id: "login" });
+      toast.error(errorMessage, {
+        id: "login",
+        duration: 4000, // Show for 4 seconds
+        description: "Please check your credentials and try again.",
+      });
     },
     // Add retry logic for network failures
     retry: (failureCount, error: any) => {

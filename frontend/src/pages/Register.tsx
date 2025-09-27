@@ -332,15 +332,6 @@ const Register = () => {
               )}
             </Button>
           </div>
-
-          {registerMutation.error && (
-            <div className="text-center">
-              <p className="text-sm text-red-600">
-                {registerMutation.error.message ||
-                  "An error occurred during registration"}
-              </p>
-            </div>
-          )}
         </form>
 
         <div className="text-center">

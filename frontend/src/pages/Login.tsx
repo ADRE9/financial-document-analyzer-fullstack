@@ -173,15 +173,6 @@ const Login = () => {
               )}
             </Button>
           </div>
-
-          {loginMutation.error && (
-            <div className="text-center">
-              <p className="text-sm text-red-600">
-                {loginMutation.error.message ||
-                  "An error occurred during login"}
-              </p>
-            </div>
-          )}
         </form>
 
         <div className="text-center">

@@ -73,10 +73,20 @@ class ApiClient {
           const retryResponse = await fetch(url, retryConfig);
 
           if (!retryResponse.ok) {
-            const errorData: ErrorResponse = await retryResponse.json();
-            throw new Error(
-              errorData.detail || errorData.error || "An error occurred"
-            );
+            let errorMessage = "An error occurred";
+
+            try {
+              const errorData: ErrorResponse = await retryResponse.json();
+              errorMessage =
+                errorData.detail || errorData.error || errorMessage;
+            } catch (parseError) {
+              errorMessage = `Request failed with status ${retryResponse.status}`;
+            }
+
+            const error = new Error(errorMessage);
+            (error as any).status = retryResponse.status;
+            (error as any).response = { status: retryResponse.status };
+            throw error;
           }
 
           // Handle empty responses (like 204 No Content)
@@ -93,10 +103,55 @@ class ApiClient {
       }
 
       if (!response.ok) {
-        const errorData: ErrorResponse = await response.json();
-        throw new Error(
-          errorData.detail || errorData.error || "An error occurred"
-        );
+        let errorMessage = "An error occurred";
+
+        try {
+          const errorData: ErrorResponse = await response.json();
+          errorMessage = errorData.detail || errorData.error || errorMessage;
+        } catch (parseError) {
+          // If we can't parse the error response, use status-based messages
+          switch (response.status) {
+            case 400:
+              errorMessage = "Bad request. Please check your input.";
+              break;
+            case 401:
+              errorMessage = "Unauthorized. Please check your credentials.";
+              break;
+            case 403:
+              errorMessage =
+                "Access forbidden. You don't have permission for this action.";
+              break;
+            case 404:
+              errorMessage = "Resource not found.";
+              break;
+            case 409:
+              errorMessage =
+                "Conflict. The resource already exists or is in use.";
+              break;
+            case 422:
+              errorMessage = "Validation error. Please check your input.";
+              break;
+            case 429:
+              errorMessage = "Too many requests. Please try again later.";
+              break;
+            case 500:
+              errorMessage = "Internal server error. Please try again later.";
+              break;
+            case 502:
+            case 503:
+            case 504:
+              errorMessage =
+                "Service temporarily unavailable. Please try again later.";
+              break;
+            default:
+              errorMessage = `Request failed with status ${response.status}`;
+          }
+        }
+
+        const error = new Error(errorMessage);
+        (error as any).status = response.status;
+        (error as any).response = { status: response.status };
+        throw error;
       }
 
       // Handle empty responses (like 204 No Content)
