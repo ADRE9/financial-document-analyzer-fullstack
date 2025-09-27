@@ -46,6 +46,8 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
 
+**Important**: During development, always run the backend in the foreground (never detached). The server should stop when you close the terminal or press Ctrl+C. In production, detached processes are acceptable.
+
 ### Frontend Setup
 
 ```bash
