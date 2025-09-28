@@ -1,12 +1,12 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
-from starlette.exceptions import HTTPException as StarletteHTTPException
+from contextlib import asynccontextmanager
 import logging
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.config import settings
 from app.routers import health, documents, analytics, auth, protected, auth_test
@@ -20,6 +20,38 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
+# Lifespan event handler
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application lifespan event handler."""
+    # Startup
+    logger.info(f"Starting {settings.app_name} v{settings.app_version}")
+    logger.info(f"Debug mode: {settings.debug}")
+    logger.info(f"Server will run on {settings.host}:{settings.port}")
+    
+    # Initialize database connections
+    try:
+        await init_databases()
+        logger.info("Database connections initialized successfully")
+    except Exception as e:
+        logger.error(f"Failed to initialize database connections: {e}")
+        # Don't raise here to allow the app to start even if DB is unavailable
+        # This is useful for development and testing
+    
+    yield
+    
+    # Shutdown
+    logger.info("Shutting down Financial Document Analyzer API")
+    
+    # Close database connections
+    try:
+        await close_databases()
+        logger.info("Database connections closed successfully")
+    except Exception as e:
+        logger.error(f"Error closing database connections: {e}")
+
+
 # Create FastAPI application
 app = FastAPI(
     title=settings.app_name,
@@ -28,6 +60,7 @@ app = FastAPI(
     docs_url="/docs" if settings.debug else None,
     redoc_url="/redoc" if settings.debug else None,
     openapi_url="/openapi.json" if settings.debug else None,
+    lifespan=lifespan,
 )
 
 # Add CORS middleware
@@ -74,8 +107,8 @@ async def log_requests(request: Request, call_next):
 
 
 # Exception handlers
-@app.exception_handler(StarletteHTTPException)
-async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
     """Handle HTTP exceptions."""
     logger.error(f"HTTP Exception: {exc.status_code} - {exc.detail}")
     
@@ -84,7 +117,7 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
         content=ErrorResponse(
             error=f"HTTP {exc.status_code}",
             detail=exc.detail,
-            timestamp=datetime.utcnow()
+            timestamp=datetime.now(timezone.utc)
         ).model_dump(mode='json')
     )
 
@@ -99,7 +132,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         content=ErrorResponse(
             error="Validation Error",
             detail="Invalid request data",
-            timestamp=datetime.utcnow()
+            timestamp=datetime.now(timezone.utc)
         ).model_dump(mode='json')
     )
 
@@ -114,7 +147,7 @@ async def general_exception_handler(request: Request, exc: Exception):
         content=ErrorResponse(
             error="Internal Server Error",
             detail="An unexpected error occurred",
-            timestamp=datetime.utcnow()
+            timestamp=datetime.now(timezone.utc)
         ).model_dump(mode='json')
     )
 
@@ -137,40 +170,10 @@ async def root():
         "version": settings.app_version,
         "docs_url": "/docs" if settings.debug else "Documentation disabled in production",
         "health_check": "/health",
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
 
-# Startup event
-@app.on_event("startup")
-async def startup_event():
-    """Application startup event."""
-    logger.info(f"Starting {settings.app_name} v{settings.app_version}")
-    logger.info(f"Debug mode: {settings.debug}")
-    logger.info(f"Server will run on {settings.host}:{settings.port}")
-    
-    # Initialize database connections
-    try:
-        await init_databases()
-        logger.info("Database connections initialized successfully")
-    except Exception as e:
-        logger.error(f"Failed to initialize database connections: {e}")
-        # Don't raise here to allow the app to start even if DB is unavailable
-        # This is useful for development and testing
-
-
-# Shutdown event
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Application shutdown event."""
-    logger.info("Shutting down Financial Document Analyzer API")
-    
-    # Close database connections
-    try:
-        await close_databases()
-        logger.info("Database connections closed successfully")
-    except Exception as e:
-        logger.error(f"Error closing database connections: {e}")
 
 
 if __name__ == "__main__":

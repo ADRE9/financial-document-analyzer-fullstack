@@ -1,4 +1,3 @@
-import React from "react";
 import { useNavigate } from "react-router";
 import { LogOut, User, FileText, BarChart3, Settings } from "lucide-react";
 import { toast } from "sonner";
@@ -8,7 +7,7 @@ import { useAuth } from "../hooks/useAuthContext";
 import { useHealth } from "../hooks/useHealth";
 import { useDocuments } from "../hooks/useDocuments";
 
-const Home: React.FC = () => {
+const Home = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { data: health, isLoading: healthLoading } = useHealth();

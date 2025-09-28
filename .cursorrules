@@ -290,6 +290,7 @@ pnpm dev
    ```
 
 2. **Async Error Handling**
+
    ```tsx
    // ✅ Proper async error handling in effects
    useEffect(() => {
@@ -347,6 +348,49 @@ pnpm dev
    };
    ```
 
+## Deprecation Prevention & Code Quality
+
+### Critical Rule: No Deprecated Functions
+
+- **ALWAYS** check latest documentation before implementing any function or class
+- **NEVER** use deprecated patterns, even if they still work
+- **PRIORITIZE** modern, recommended approaches over legacy patterns
+- **AUDIT** codebase regularly for deprecated usage
+
+### FastAPI Deprecation Checks
+
+- ✅ Use `lifespan` instead of `@app.on_event("startup")` and `@app.on_event("shutdown")`
+- ✅ Use `HTTPException` from `fastapi` instead of `starlette.exceptions.HTTPException`
+- ✅ Use `Request` from `fastapi` instead of `starlette.requests.Request`
+- ✅ Use `Response` from `fastapi` instead of `starlette.responses.Response`
+- ✅ Use `Depends()` for dependency injection instead of manual dependency resolution
+- ✅ Use `BackgroundTasks` for background operations instead of manual threading
+
+### React 19 Deprecation Checks
+
+- ✅ Use functional components instead of class components
+- ✅ Use hooks instead of lifecycle methods
+- ✅ Use `createContext` with proper TypeScript typing
+- ✅ Avoid `React.FC` type annotation (use direct prop typing)
+- ✅ Use named imports instead of default React import
+- ✅ Use `useCallback` and `useMemo` for performance optimization
+
+### Python Deprecation Checks
+
+- ✅ Use `asynccontextmanager` for async context managers
+- ✅ Use `typing.Union` or `|` syntax instead of `typing.Union` (Python 3.10+)
+- ✅ Use `pathlib.Path` instead of `os.path` for file operations
+- ✅ Use `dataclasses` instead of manual `__init__` methods
+- ✅ Use `enum.Enum` instead of manual constant definitions
+
+### Regular Audit Process
+
+1. **Before Implementation**: Check latest docs for current best practices
+2. **During Development**: Use IDE warnings and linter to catch deprecated usage
+3. **Code Review**: Always verify no deprecated patterns are introduced
+4. **Periodic Scans**: Run deprecation checks on entire codebase monthly
+5. **Dependency Updates**: Check for deprecated dependencies in requirements
+
 ## Development Notes
 
 - Always check memory bank files for current context
@@ -356,3 +400,4 @@ pnpm dev
 - Document any new patterns or decisions in .cursorrules
 - **React Compliance**: Ensure all components follow React 19 best practices
 - **Code Review**: Check for React.FC usage, unnecessary React imports, hook violations
+- **Deprecation Prevention**: Always use latest recommended patterns, never deprecated functions
