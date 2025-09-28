@@ -234,6 +234,30 @@ This file tracks all bugs, issues, and inefficiencies found in the codebase. Eac
   - Both functions now use identical truncation logic to ensure consistency
 - **Verification**: Comprehensive test suite with 11 different UTF-8 password scenarios confirms all tests pass
 
+### BUG-013: Refresh Token Endpoint JSON Request Body Bug
+
+- **Status**: ✅ Fixed
+- **Priority**: 🟠 High
+- **Category**: Backend
+- **Description**: The `refresh_access_token` endpoint's `refresh_token_data: dict` parameter is not correctly configured to receive a JSON request body, causing FastAPI to not populate the parameter and introducing type safety issues
+- **Files**: `backend/app/routers/auth.py` (line 381), `backend/app/models/schemas.py` (missing schema)
+- **Impact**: Refresh token endpoint non-functional, type safety issues, poor API design
+- **Discovery Date**: 2024-01-15
+- **Resolution Date**: 2024-01-15
+- **Steps to Reproduce**: 
+  1. Send POST request to `/auth/refresh` with JSON body `{"refresh_token": "token_value"}`
+  2. FastAPI will not populate the `refresh_token_data` parameter
+  3. Endpoint will fail to extract the refresh token
+- **Expected**: FastAPI should properly populate the parameter with the JSON request body
+- **Actual**: ✅ **FIXED** - Created proper Pydantic schema and updated endpoint parameter type
+- **Fix Details**:
+  - Created `RefreshTokenRequest` Pydantic schema in `schemas.py` with proper field validation
+  - Updated endpoint parameter from `refresh_token_data: dict` to `refresh_token_data: RefreshTokenRequest`
+  - Updated import statement to include the new schema
+  - Changed token extraction from `refresh_token_data.get("refresh_token")` to `refresh_token_data.refresh_token`
+  - FastAPI now properly validates and populates the request body
+- **Verification**: Schema validation test confirms proper JSON request body handling
+
 ---
 
 ## Resolved Bugs
@@ -256,16 +280,22 @@ This file tracks all bugs, issues, and inefficiencies found in the codebase. Eac
 - **Fix**: Implemented UTF-8-safe password truncation with consistent logic in both hashing and verification functions
 - **Verification**: Comprehensive test suite with 11 different UTF-8 password scenarios confirms all tests pass
 
+### BUG-013: Refresh Token Endpoint JSON Request Body Bug ✅ Fixed
+
+- **Resolution Date**: 2024-01-15
+- **Fix**: Created proper Pydantic schema and updated endpoint parameter type for proper JSON request body handling
+- **Verification**: Schema validation test confirms proper JSON request body handling
+
 ---
 
 ## Bug Statistics
 
-- **Total Bugs**: 12
+- **Total Bugs**: 13
 - **Open**: 9
 - **In Progress**: 0
-- **Fixed**: 3
+- **Fixed**: 4
 - **Critical**: 2 (was 3, BUG-012 fixed)
-- **High**: 2 (was 3, BUG-006 fixed)
+- **High**: 1 (was 2, BUG-013 fixed)
 - **Medium**: 5 (was 4, BUG-011 fixed)
 - **Low**: 0
 

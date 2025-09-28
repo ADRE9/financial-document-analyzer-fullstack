@@ -178,6 +178,11 @@ class PasswordChangeRequest(BaseModel):
         return v
 
 
+class RefreshTokenRequest(BaseModel):
+    """Refresh token request model."""
+    refresh_token: str = Field(..., description="Refresh token")
+
+
 class LogoutRequest(BaseModel):
     """Logout request model."""
     logout_all_devices: bool = Field(False, description="Logout from all devices")

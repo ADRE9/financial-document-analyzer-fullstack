@@ -22,6 +22,7 @@ from app.models.schemas import (
     UserResponse,
     UserUpdateRequest,
     PasswordChangeRequest,
+    RefreshTokenRequest,
     LogoutRequest,
     SessionInfo,
     UserSessionsResponse,
@@ -378,7 +379,7 @@ async def get_user_sessions(
 
 @router.post("/refresh", response_model=TokenResponse)
 async def refresh_access_token(
-    refresh_token_data: dict,
+    refresh_token_data: RefreshTokenRequest,
     request: Request
 ):
     """
@@ -387,12 +388,7 @@ async def refresh_access_token(
     Validates refresh token and issues new access and refresh tokens.
     """
     try:
-        refresh_token = refresh_token_data.get("refresh_token")
-        if not refresh_token:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Refresh token is required"
-            )
+        refresh_token = refresh_token_data.refresh_token
         
         # Verify refresh token
         try:
