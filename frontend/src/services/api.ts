@@ -35,9 +35,12 @@ class ApiClient {
   ): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
 
-    const defaultHeaders: Record<string, string> = {
-      "Content-Type": "application/json",
-    };
+    const defaultHeaders: Record<string, string> = {};
+
+    // Only set Content-Type to application/json if it's not a FormData request
+    if (!(options.body instanceof FormData)) {
+      defaultHeaders["Content-Type"] = "application/json";
+    }
 
     // Add authorization header if token exists
     const authHeader = tokenManager.getAuthHeader();
@@ -188,7 +191,6 @@ class ApiClient {
   ): Promise<DocumentAnalysisResponse> {
     const formData = new FormData();
     formData.append("file", file);
-    formData.append("filename", uploadData.filename);
     formData.append("document_type", uploadData.document_type);
     if (uploadData.description) {
       formData.append("description", uploadData.description);
@@ -196,7 +198,7 @@ class ApiClient {
 
     return this.request<DocumentAnalysisResponse>("/documents/upload", {
       method: "POST",
-      headers: {}, // Remove Content-Type to let browser set it with boundary
+      headers: {}, // Remove Content-Type to let browser set it with boundary for multipart/form-data
       body: formData,
     });
   }
