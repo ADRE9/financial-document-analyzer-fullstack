@@ -286,6 +286,12 @@ This file tracks all bugs, issues, and inefficiencies found in the codebase. Eac
 - **Fix**: Created proper Pydantic schema and updated endpoint parameter type for proper JSON request body handling
 - **Verification**: Schema validation test confirms proper JSON request body handling
 
+### BUG-015: Navigation Logic Runs During Component Render ✅ Fixed
+
+- **Resolution Date**: 2024-01-15
+- **Fix**: Moved navigation logic from render phase to useEffect hook with proper dependency arrays
+- **Verification**: No linter errors, components follow proper React lifecycle patterns
+
 ### BUG-014: Redundant Index Definitions in User Models ✅ Fixed
 
 - **Status**: ✅ Fixed
@@ -312,15 +318,41 @@ This file tracks all bugs, issues, and inefficiencies found in the codebase. Eac
 
 ---
 
+### BUG-015: Navigation Logic Runs During Component Render
+
+- **Status**: ✅ Fixed
+- **Priority**: 🟠 High
+- **Category**: Frontend
+- **Description**: Navigation logic runs directly during component render in both `AdminHome` and `ViewerHome` components, specifically within the role-based redirect checks. Performing this side effect in the render phase violates React's rules and may cause unexpected behavior, including infinite re-renders or navigation loops
+- **Files**: `frontend/src/pages/AdminHome.tsx` (lines 32-35), `frontend/src/pages/ViewerHome.tsx` (lines 14-17)
+- **Impact**: Violates React rules, potential infinite re-renders, navigation loops, unpredictable behavior
+- **Discovery Date**: 2024-01-15
+- **Resolution Date**: 2024-01-15
+- **Steps to Reproduce**:
+  1. Navigate to `/admin` or `/viewer` page
+  2. If user doesn't have proper role, navigation occurs during render phase
+  3. This violates React's rules about side effects during render
+- **Expected**: Navigation logic should be moved to useEffect to prevent side effects during render
+- **Actual**: ✅ **FIXED** - Navigation logic moved to useEffect with proper dependency array
+- **Fix Details**:
+  - Added `useEffect` import to both components
+  - Moved navigation logic from render phase to `useEffect` hook
+  - Added proper dependency arrays `[isAdmin, navigate]` and `[isViewer, navigate]`
+  - Kept early return for conditional rendering to prevent UI flash
+  - Follows React 19 best practices for handling side effects
+- **Verification**: No linter errors, components follow proper React lifecycle patterns
+
+---
+
 ## Bug Statistics
 
-- **Total Bugs**: 14
+- **Total Bugs**: 15
 - **Open**: 9
 - **In Progress**: 0
-- **Fixed**: 5
-- **Critical**: 2 (was 3, BUG-012 fixed)
-- **High**: 1 (was 2, BUG-013 fixed)
-- **Medium**: 4 (was 5, BUG-014 fixed)
+- **Fixed**: 6
+- **Critical**: 2
+- **High**: 0 (was 1, BUG-015 fixed)
+- **Medium**: 4
 - **Low**: 0
 
 ---

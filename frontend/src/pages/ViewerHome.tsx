@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router";
+import { useEffect } from "react";
 import { LogOut, User, FileText, Eye } from "lucide-react";
 import { toast } from "sonner";
 
@@ -10,9 +11,15 @@ const ViewerHome = () => {
   const { user, logout, isViewer } = useAuth();
   const navigate = useNavigate();
 
-  // Redirect if not viewer (additional protection)
+  // Redirect if not viewer (additional protection) - moved to useEffect to avoid side effects during render
+  useEffect(() => {
+    if (!isViewer) {
+      navigate("/home", { replace: true });
+    }
+  }, [isViewer, navigate]);
+
+  // Early return if not viewer to prevent rendering
   if (!isViewer) {
-    navigate("/home", { replace: true });
     return null;
   }
 

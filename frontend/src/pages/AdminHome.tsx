@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router";
+import { useEffect } from "react";
 import {
   LogOut,
   User,
@@ -28,9 +29,15 @@ const AdminHome = () => {
   const { data: health, isLoading: healthLoading } = useHealth();
   const { data: documents, isLoading: documentsLoading } = useDocuments();
 
-  // Redirect if not admin (additional protection)
+  // Redirect if not admin (additional protection) - moved to useEffect to avoid side effects during render
+  useEffect(() => {
+    if (!isAdmin) {
+      navigate("/home", { replace: true });
+    }
+  }, [isAdmin, navigate]);
+
+  // Early return if not admin to prevent rendering
   if (!isAdmin) {
-    navigate("/home", { replace: true });
     return null;
   }
 
