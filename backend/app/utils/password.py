@@ -26,6 +26,30 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
         bool: True if password matches, False otherwise
     """
     try:
+        # Apply the same truncation logic as in get_password_hash
+        # to ensure consistency between hashing and verification
+        password_bytes = plain_password.encode('utf-8')
+        if len(password_bytes) > 72:
+            # Apply the same truncation logic as in get_password_hash
+            truncated_password = password_bytes[:72].decode('utf-8', errors='ignore')
+            
+            # If the truncated password is empty or too short, try to find a valid boundary
+            if len(truncated_password) < 4:  # Minimum reasonable password length
+                # Work backwards from 72 bytes to find a valid UTF-8 boundary
+                for i in range(72, 0, -1):
+                    try:
+                        test_password = password_bytes[:i].decode('utf-8')
+                        if len(test_password) >= 4:  # Ensure we have a reasonable password
+                            truncated_password = test_password
+                            break
+                    except UnicodeDecodeError:
+                        continue
+                else:
+                    # If we can't find a valid boundary, use the first 72 bytes with replacement
+                    truncated_password = password_bytes[:72].decode('utf-8', errors='replace')
+            
+            plain_password = truncated_password
+        
         return pwd_context.verify(plain_password, hashed_password)
     except Exception as e:
         logger.error(f"Password verification failed: {e}")
@@ -46,8 +70,26 @@ def get_password_hash(password: str) -> str:
         # bcrypt has a 72-byte limit, so we need to truncate if necessary
         password_bytes = password.encode('utf-8')
         if len(password_bytes) > 72:
-            # Truncate to 72 bytes and decode back to string
-            password = password_bytes[:72].decode('utf-8', errors='ignore')
+            # Truncate to 72 bytes, but ensure we don't break UTF-8 characters
+            # Find the last complete UTF-8 character boundary within 72 bytes
+            truncated_password = password_bytes[:72].decode('utf-8', errors='ignore')
+            
+            # If the truncated password is empty or too short, try to find a valid boundary
+            if len(truncated_password) < 4:  # Minimum reasonable password length
+                # Work backwards from 72 bytes to find a valid UTF-8 boundary
+                for i in range(72, 0, -1):
+                    try:
+                        test_password = password_bytes[:i].decode('utf-8')
+                        if len(test_password) >= 4:  # Ensure we have a reasonable password
+                            truncated_password = test_password
+                            break
+                    except UnicodeDecodeError:
+                        continue
+                else:
+                    # If we can't find a valid boundary, use the first 72 bytes with replacement
+                    truncated_password = password_bytes[:72].decode('utf-8', errors='replace')
+            
+            password = truncated_password
         return pwd_context.hash(password)
     except Exception as e:
         logger.error(f"Password hashing failed: {e}")

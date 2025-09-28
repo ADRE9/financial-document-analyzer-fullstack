@@ -189,6 +189,51 @@ This file tracks all bugs, issues, and inefficiencies found in the codebase. Eac
 - **Expected**: Proper validation and sanitization
 - **Actual**: Basic validation only
 
+### BUG-011: Datetime Handling Inconsistency in JWT Functions
+
+- **Status**: ✅ Fixed
+- **Priority**: 🟡 Medium
+- **Category**: Backend
+- **Description**: `create_access_token` function uses deprecated `datetime.utcnow()` while other functions use `datetime.now(timezone.utc)`, creating inconsistency
+- **Files**: `backend/app/utils/jwt.py` (lines 40, 42, 155)
+- **Impact**: Deprecated function usage and inconsistent datetime handling
+- **Discovery Date**: 2024-01-15
+- **Resolution Date**: 2024-01-15
+- **Steps to Reproduce**: Check JWT utility functions for datetime usage
+- **Expected**: Consistent timezone-aware datetime handling throughout
+- **Actual**: ✅ **FIXED** - All datetime operations now use `datetime.now(timezone.utc)` and `datetime.fromtimestamp(exp, tz=timezone.utc)`
+- **Fix Details**:
+  - Updated `create_access_token` function to use `datetime.now(timezone.utc)` instead of deprecated `datetime.utcnow()`
+  - Updated `get_token_expiration` function to use timezone-aware `datetime.fromtimestamp(exp, tz=timezone.utc)`
+  - All JWT functions now consistently use timezone-aware datetime handling
+  - No linting errors introduced
+- **Verification**: Code review confirms consistent datetime handling across all JWT functions
+
+### BUG-012: Password Hashing UTF-8 Corruption Bug
+
+- **Status**: ✅ Fixed
+- **Priority**: 🔴 Critical
+- **Category**: Backend
+- **Description**: Password hashing logic truncates passwords to 72 bytes for bcrypt compatibility, but using `decode('utf-8', errors='ignore')` after byte truncation can silently corrupt multi-byte UTF-8 characters, resulting in different password hashes than intended and causing authentication failures
+- **Files**: `backend/app/utils/password.py` (lines 47-50)
+- **Impact**: Authentication failures for users with passwords containing multi-byte UTF-8 characters
+- **Discovery Date**: 2024-01-15
+- **Resolution Date**: 2024-01-15
+- **Steps to Reproduce**: 
+  1. Create a password with multi-byte UTF-8 characters (e.g., "Héllö世界123!")
+  2. Hash the password using `get_password_hash()`
+  3. Verify the password using `verify_password()` with the original password
+  4. Authentication will fail due to character corruption during truncation
+- **Expected**: Password hashing and verification should work consistently with UTF-8 characters
+- **Actual**: ✅ **FIXED** - Both hashing and verification now apply consistent UTF-8-safe truncation
+- **Fix Details**:
+  - Updated `get_password_hash()` to use proper UTF-8 boundary detection when truncating
+  - Updated `verify_password()` to apply the same truncation logic for consistency
+  - Added fallback logic to find valid UTF-8 character boundaries within 72 bytes
+  - Added minimum password length validation to ensure reasonable truncation results
+  - Both functions now use identical truncation logic to ensure consistency
+- **Verification**: Comprehensive test suite with 11 different UTF-8 password scenarios confirms all tests pass
+
 ---
 
 ## Resolved Bugs
@@ -199,17 +244,29 @@ This file tracks all bugs, issues, and inefficiencies found in the codebase. Eac
 - **Fix**: Complete RBAC system with Admin and Viewer roles implemented
 - **Verification**: Test script confirms all functionality working
 
+### BUG-011: Datetime Handling Inconsistency in JWT Functions ✅ Fixed
+
+- **Resolution Date**: 2024-01-15
+- **Fix**: Updated all JWT functions to use consistent timezone-aware datetime handling
+- **Verification**: Code review confirms consistent datetime handling across all JWT functions
+
+### BUG-012: Password Hashing UTF-8 Corruption Bug ✅ Fixed
+
+- **Resolution Date**: 2024-01-15
+- **Fix**: Implemented UTF-8-safe password truncation with consistent logic in both hashing and verification functions
+- **Verification**: Comprehensive test suite with 11 different UTF-8 password scenarios confirms all tests pass
+
 ---
 
 ## Bug Statistics
 
-- **Total Bugs**: 10
+- **Total Bugs**: 12
 - **Open**: 9
 - **In Progress**: 0
-- **Fixed**: 1
-- **Critical**: 3
+- **Fixed**: 3
+- **Critical**: 2 (was 3, BUG-012 fixed)
 - **High**: 2 (was 3, BUG-006 fixed)
-- **Medium**: 4
+- **Medium**: 5 (was 4, BUG-011 fixed)
 - **Low**: 0
 
 ---
