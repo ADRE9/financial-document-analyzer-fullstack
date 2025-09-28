@@ -219,8 +219,8 @@ This file tracks all bugs, issues, and inefficiencies found in the codebase. Eac
 - **Impact**: Authentication failures for users with passwords containing multi-byte UTF-8 characters
 - **Discovery Date**: 2024-01-15
 - **Resolution Date**: 2024-01-15
-- **Steps to Reproduce**: 
-  1. Create a password with multi-byte UTF-8 characters (e.g., "Héllö世界123!")
+- **Steps to Reproduce**:
+  1. Create a password with multi-byte UTF-8 characters (e.g., "Héllö 世界 123!")
   2. Hash the password using `get_password_hash()`
   3. Verify the password using `verify_password()` with the original password
   4. Authentication will fail due to character corruption during truncation
@@ -244,7 +244,7 @@ This file tracks all bugs, issues, and inefficiencies found in the codebase. Eac
 - **Impact**: Refresh token endpoint non-functional, type safety issues, poor API design
 - **Discovery Date**: 2024-01-15
 - **Resolution Date**: 2024-01-15
-- **Steps to Reproduce**: 
+- **Steps to Reproduce**:
   1. Send POST request to `/auth/refresh` with JSON body `{"refresh_token": "token_value"}`
   2. FastAPI will not populate the `refresh_token_data` parameter
   3. Endpoint will fail to extract the refresh token
@@ -286,17 +286,41 @@ This file tracks all bugs, issues, and inefficiencies found in the codebase. Eac
 - **Fix**: Created proper Pydantic schema and updated endpoint parameter type for proper JSON request body handling
 - **Verification**: Schema validation test confirms proper JSON request body handling
 
+### BUG-014: Redundant Index Definitions in User Models ✅ Fixed
+
+- **Status**: ✅ Fixed
+- **Priority**: 🟡 Medium
+- **Category**: Backend
+- **Description**: User and UserSession models contain redundant index definitions. Fields like username, email, session_token, and refresh_token are indexed both at the field level using Indexed() and again within the Settings.indexes list, causing MongoDB index creation conflicts
+- **Files**: `backend/app/models/user.py` (lines 22-23, 45-56, 140-142, 163-173)
+- **Impact**: MongoDB index creation conflicts and potential database errors
+- **Discovery Date**: 2024-01-15
+- **Resolution Date**: 2024-01-15
+- **Steps to Reproduce**:
+  1. Check User model field definitions with Indexed() decorators
+  2. Check Settings.indexes list for duplicate index definitions
+  3. MongoDB will attempt to create duplicate indexes causing conflicts
+- **Expected**: Each field should be indexed only once
+- **Actual**: ✅ **FIXED** - Removed redundant index definitions from Settings.indexes list
+- **Fix Details**:
+  - Removed redundant single-field indexes from User.Settings.indexes (username, email, role, is_active, is_verified)
+  - Removed redundant single-field indexes from UserSession.Settings.indexes (user_id, session_token, refresh_token, expires_at, is_active)
+  - Kept compound indexes and TTL index as they provide additional query optimization
+  - Fields are still properly indexed via Indexed() decorators at field level
+  - No linting errors introduced
+- **Verification**: Code review confirms no duplicate index definitions, MongoDB index conflicts resolved
+
 ---
 
 ## Bug Statistics
 
-- **Total Bugs**: 13
+- **Total Bugs**: 14
 - **Open**: 9
 - **In Progress**: 0
-- **Fixed**: 4
+- **Fixed**: 5
 - **Critical**: 2 (was 3, BUG-012 fixed)
 - **High**: 1 (was 2, BUG-013 fixed)
-- **Medium**: 5 (was 4, BUG-011 fixed)
+- **Medium**: 4 (was 5, BUG-014 fixed)
 - **Low**: 0
 
 ---

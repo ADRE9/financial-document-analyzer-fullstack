@@ -43,12 +43,6 @@ class User(BaseDocument):
         use_state_management = True
         validate_on_save = True
         indexes = [
-            IndexModel("username", unique=True),
-            IndexModel("email", unique=True),
-            IndexModel("role"),
-            IndexModel("is_active"),
-            IndexModel("is_verified"),
-            IndexModel([("created_at", -1)]),  # Recent users first
             # Compound index for active verified users
             IndexModel([("is_active", 1), ("is_verified", 1)]),
             # Index for role-based queries
@@ -161,11 +155,6 @@ class UserSession(BaseDocument):
         use_state_management = True
         validate_on_save = True
         indexes = [
-            IndexModel("user_id"),
-            IndexModel("session_token", unique=True),
-            IndexModel("refresh_token", unique=True, sparse=True),
-            IndexModel("expires_at"),
-            IndexModel("is_active"),
             IndexModel([("user_id", 1), ("is_active", 1)]),
             IndexModel([("expires_at", 1), ("is_active", 1)]),
             # TTL index to automatically delete expired sessions
