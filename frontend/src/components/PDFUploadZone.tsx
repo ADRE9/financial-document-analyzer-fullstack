@@ -9,13 +9,13 @@ import { Progress } from "./ui/progress";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { useUploadDocument } from "../hooks/useDocuments";
-import { DocumentType } from "../types/api";
+import { DocumentType, type DocumentAnalysisResponse } from "../types/api";
 import { FileDropZone } from "./upload/FileDropZone";
 import { UploadStatus } from "./upload/UploadStatus";
 import { useFileValidation, useFileDragAndDrop } from "../hooks/useFileUpload";
 
 interface PDFUploadZoneProps {
-  onUploadSuccess?: (document: unknown) => void;
+  onUploadSuccess?: (document: DocumentAnalysisResponse) => void;
   onUploadError?: (error: string) => void;
   maxSizeBytes?: number;
   className?: string;

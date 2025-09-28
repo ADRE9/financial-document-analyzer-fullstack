@@ -47,9 +47,7 @@ const ViewerHome = () => {
           <PDFUploadZone
             onUploadSuccess={(document) => {
               toast.success(
-                `Document "${
-                  (document as any).filename
-                }" uploaded successfully!`
+                `Document "${document.filename}" uploaded successfully!`
               );
               // The document list will automatically refresh via React Query
             }}
