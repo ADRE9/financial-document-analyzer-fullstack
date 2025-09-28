@@ -251,7 +251,7 @@ async def get_document(
     
     try:
         # Get document from database
-        document = await FinancialDocument.get(document_id)
+        document = await FinancialDocument.find_by_id(document_id)
         
         if not document:
             raise HTTPException(
@@ -300,7 +300,7 @@ async def delete_document(
     
     try:
         # Get document from database
-        document = await FinancialDocument.get(document_id)
+        document = await FinancialDocument.find_by_id(document_id)
         
         if not document:
             raise HTTPException(

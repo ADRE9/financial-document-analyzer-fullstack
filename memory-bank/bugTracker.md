@@ -512,15 +512,39 @@ This file tracks all bugs, issues, and inefficiencies found in the codebase. Eac
   - Implemented proper error handling for invalid passwords
 - **Verification**: Password-protected PDFs can now be uploaded and processed successfully
 
+### BUG-022: FinancialDocument.get() ObjectId Bug
+
+- **Status**: ✅ Fixed
+- **Priority**: 🔴 Critical
+- **Category**: Backend
+- **Description**: The `FinancialDocument.get()` method in both the `get_document` and `delete_document` endpoints receives a string `document_id`. This method expects a MongoDB `ObjectId`, leading to database query failures
+- **Files**: `backend/app/routers/documents.py` (lines 254, 303)
+- **Impact**: Database query failures when retrieving or deleting documents, system instability
+- **Discovery Date**: 2024-01-15
+- **Resolution Date**: 2024-01-15
+- **Steps to Reproduce**:
+  1. Call GET `/documents/{document_id}` with a valid document ID
+  2. Call DELETE `/documents/{document_id}` with a valid document ID
+  3. Both endpoints fail with ObjectId conversion errors
+- **Expected**: String document IDs should be properly converted to ObjectId before database queries
+- **Actual**: ✅ **FIXED** - Replaced `FinancialDocument.get()` with `FinancialDocument.find_by_id()` for proper ObjectId conversion
+- **Fix Details**:
+  - Updated `get_document` endpoint to use `FinancialDocument.find_by_id(document_id)` instead of `FinancialDocument.get(document_id)`
+  - Updated `delete_document` endpoint to use `FinancialDocument.find_by_id(document_id)` instead of `FinancialDocument.get(document_id)`
+  - The `find_by_id` method from `BaseDocument` properly converts string IDs to ObjectId using `ObjectId(doc_id)`
+  - Both endpoints now work correctly with string document IDs
+  - No linting errors introduced
+- **Verification**: Document retrieval and deletion operations now work correctly with proper ObjectId handling
+
 ---
 
 ## Bug Statistics
 
-- **Total Bugs**: 21
-- **Open**: 8
+- **Total Bugs**: 22
+- **Open**: 7
 - **In Progress**: 0
-- **Fixed**: 13
-- **Critical**: 0 (BUG-019 Fixed)
+- **Fixed**: 15
+- **Critical**: 0 (BUG-019, BUG-022 Fixed)
 - **High**: 0 (BUG-017, BUG-018, BUG-020, BUG-021 Fixed)
 - **Medium**: 4
 - **Low**: 0
