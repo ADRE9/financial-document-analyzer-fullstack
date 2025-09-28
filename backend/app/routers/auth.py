@@ -283,8 +283,8 @@ async def update_user_profile(
         
         if update_data:
             await current_user.update_with_timestamp(update_data)
-            # Reload user to get updated data
-            updated_user = await User.get(current_user.id)
+            # Reload user to get updated data (convert string ID to ObjectId)
+            updated_user = await User.find_by_id(str(current_user.id))
             logger.info(f"User profile updated: {current_user.username}")
             return UserResponse(**updated_user.to_response_dict())
         
@@ -405,8 +405,8 @@ async def refresh_access_token(
                 detail="Invalid refresh token"
             )
         
-        # Get user
-        user = await User.get(user_id)
+        # Get user (convert string ID to ObjectId)
+        user = await User.find_by_id(user_id)
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,

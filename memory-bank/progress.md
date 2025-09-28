@@ -133,6 +133,12 @@
    - Authentication middleware with role-based dependencies
    - Protected endpoints demonstrating role access control
    - Test script for RBAC verification
+3. **String User ID Bug**: Fixed critical authentication bug where string user IDs from JWTs were passed directly to `User.get()` which expects ObjectId:
+   - Updated `get_current_user` dependency to use `User.find_by_id()` for proper ObjectId conversion
+   - Fixed `refresh_access_token` endpoint to handle string IDs correctly
+   - Updated profile update endpoint to use proper ID conversion
+   - All authentication and token refresh operations now work correctly
+   - Verified fix with comprehensive test suite
 
 ## Next Milestones 🎯
 

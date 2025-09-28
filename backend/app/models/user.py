@@ -84,7 +84,7 @@ class User(BaseDocument):
     async def get_active_sessions(self) -> List["UserSession"]:
         """Get all active sessions for this user."""
         return await UserSession.find({
-            "user_id": self.id,
+            "user_id": str(self.id),
             "is_active": True,
             "expires_at": {"$gt": datetime.now(timezone.utc)}
         }).to_list()
@@ -92,7 +92,7 @@ class User(BaseDocument):
     async def deactivate_all_sessions(self):
         """Deactivate all sessions for this user."""
         await UserSession.find({
-            "user_id": self.id,
+            "user_id": str(self.id),
             "is_active": True
         }).update({"$set": {"is_active": False}})
     

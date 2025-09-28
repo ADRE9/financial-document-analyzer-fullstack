@@ -258,6 +258,31 @@ This file tracks all bugs, issues, and inefficiencies found in the codebase. Eac
   - FastAPI now properly validates and populates the request body
 - **Verification**: Schema validation test confirms proper JSON request body handling
 
+### BUG-016: String User ID Bug in Authentication
+
+- **Status**: ✅ Fixed
+- **Priority**: 🔴 Critical
+- **Category**: Backend
+- **Description**: The `get_current_user` dependency and `refresh_access_token` endpoint pass string user IDs from JWTs directly to `User.get()`. As Beanie's `get()` expects an ObjectId, this can cause authentication and token refresh failures
+- **Files**: `backend/app/middleware/auth.py` (line 87), `backend/app/routers/auth.py` (lines 287, 409)
+- **Impact**: Authentication failures, token refresh failures, system instability
+- **Discovery Date**: 2024-01-15
+- **Resolution Date**: 2024-01-15
+- **Steps to Reproduce**:
+  1. Login with valid credentials to get JWT token
+  2. Use token for authenticated requests
+  3. Authentication will fail due to ObjectId conversion error
+  4. Token refresh will also fail with same error
+- **Expected**: String user IDs should be properly converted to ObjectId before database queries
+- **Actual**: ✅ **FIXED** - Replaced `User.get()` with `User.find_by_id()` for proper ObjectId conversion
+- **Fix Details**:
+  - Updated `get_current_user` dependency in `auth.py` to use `User.find_by_id(user_id_str)` instead of `User.get(user_id_str)`
+  - Updated `refresh_access_token` endpoint to use `User.find_by_id(user_id)` instead of `User.get(user_id)`
+  - Updated profile update endpoint to use `User.find_by_id(str(current_user.id))` instead of `User.get(current_user.id)`
+  - All string user IDs now properly converted to ObjectId using the `find_by_id` helper method
+  - No linting errors introduced
+- **Verification**: All authentication and token refresh operations now work correctly with proper ObjectId handling
+
 ---
 
 ## Resolved Bugs
@@ -342,15 +367,38 @@ This file tracks all bugs, issues, and inefficiencies found in the codebase. Eac
   - Follows React 19 best practices for handling side effects
 - **Verification**: No linter errors, components follow proper React lifecycle patterns
 
+### BUG-016: Type Mismatch in User Session Queries
+
+- **Status**: ✅ Fixed
+- **Priority**: 🔴 Critical
+- **Category**: Backend
+- **Description**: The `User` methods `get_active_sessions()` and `deactivate_all_sessions()` pass `self.id` (a MongoDB ObjectId) directly to queries for `UserSession.user_id`. Since `UserSession.user_id` is a string field, this type mismatch prevents these database operations from succeeding
+- **Files**: `backend/app/models/user.py` (lines 87, 95)
+- **Impact**: Database operations fail silently, user session management non-functional
+- **Discovery Date**: 2024-01-15
+- **Resolution Date**: 2024-01-15
+- **Steps to Reproduce**:
+  1. Call `user.get_active_sessions()` method
+  2. Call `user.deactivate_all_sessions()` method
+  3. Database queries fail due to type mismatch between ObjectId and string
+- **Expected**: User session methods should work correctly with proper type conversion
+- **Actual**: ✅ **FIXED** - Converted `self.id` to string using `str(self.id)` in both methods
+- **Fix Details**:
+  - Updated `get_active_sessions()` method to use `str(self.id)` instead of `self.id`
+  - Updated `deactivate_all_sessions()` method to use `str(self.id)` instead of `self.id`
+  - Ensures type compatibility between MongoDB ObjectId and string field
+  - No linting errors introduced
+- **Verification**: Code review confirms proper type conversion, database operations will succeed
+
 ---
 
 ## Bug Statistics
 
-- **Total Bugs**: 15
-- **Open**: 9
+- **Total Bugs**: 16
+- **Open**: 8
 - **In Progress**: 0
-- **Fixed**: 6
-- **Critical**: 2
+- **Fixed**: 8
+- **Critical**: 1 (was 2, BUG-016 fixed)
 - **High**: 0 (was 1, BUG-015 fixed)
 - **Medium**: 4
 - **Low**: 0

@@ -83,8 +83,8 @@ async def get_current_user(
         if user_id_str is None:
             raise credentials_exception
         
-        # Get user from MongoDB using Beanie
-        user = await User.get(user_id_str)
+        # Get user from MongoDB using Beanie (convert string ID to ObjectId)
+        user = await User.find_by_id(user_id_str)
         
         if user is None:
             raise credentials_exception
