@@ -21,14 +21,13 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = 30
     
-    # PostgreSQL Database settings
-    postgres_host: str = "localhost"
-    postgres_port: int = 5432
-    postgres_user: str = "postgres"
-    postgres_password: str = "postgres"
-    postgres_db: str = "financial_docs"
-    postgres_url: Optional[str] = None
-    
+    # MongoDB Database settings
+    mongodb_host: str = "localhost"
+    mongodb_port: int = 27017
+    mongodb_user: Optional[str] = None
+    mongodb_password: Optional[str] = None
+    mongodb_db: str = "financial_docs"
+    mongodb_url: Optional[str] = None
     
     # CORS settings - for development, allow all localhost ports
     allowed_origins: List[str] = [
@@ -42,10 +41,15 @@ class Settings(BaseSettings):
     
     @property
     def database_url(self) -> str:
-        """Generate PostgreSQL database URL from individual components."""
-        if self.postgres_url:
-            return self.postgres_url
-        return f"postgresql://{self.postgres_user}:{self.postgres_password}@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
+        """Generate MongoDB connection URL from individual components."""
+        if self.mongodb_url:
+            return self.mongodb_url
+        
+        # Build MongoDB URL
+        if self.mongodb_user and self.mongodb_password:
+            return f"mongodb://{self.mongodb_user}:{self.mongodb_password}@{self.mongodb_host}:{self.mongodb_port}/{self.mongodb_db}"
+        else:
+            return f"mongodb://{self.mongodb_host}:{self.mongodb_port}/{self.mongodb_db}"
     
     
     class Config:

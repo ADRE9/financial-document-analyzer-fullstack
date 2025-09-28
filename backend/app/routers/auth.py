@@ -1,19 +1,19 @@
 """
-Authentication router.
+Authentication router for user registration, login, and session management.
 
-This module contains authentication endpoints for user registration, login, logout, and session management.
+This module provides authentication endpoints using MongoDB/Beanie for data persistence
+and JWT tokens for session management.
 """
 
 import logging
-from datetime import datetime, timedelta, timezone
-from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status, Request
-from pydantic import BaseModel, Field
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, delete
-from sqlalchemy.exc import IntegrityError
+from datetime import datetime, timezone, timedelta
+from typing import Optional
 
-from app.database import get_db_session
+from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi.security import OAuth2PasswordBearer
+from pydantic import BaseModel, Field
+
+# MongoDB/Beanie handles database sessions automatically
 from app.models.user import User, UserSession
 from app.models.schemas import (
     UserRegisterRequest,
@@ -22,163 +22,132 @@ from app.models.schemas import (
     UserResponse,
     UserUpdateRequest,
     PasswordChangeRequest,
+    RefreshTokenRequest,
     LogoutRequest,
     SessionInfo,
     UserSessionsResponse,
+    ErrorResponse,
     SuccessResponse,
-    ErrorResponse
+    UserRole
 )
-from app.utils.password import get_password_hash, verify_password
+from app.utils.password import verify_password, get_password_hash
 from app.utils.jwt import create_access_token, create_refresh_token, verify_token
+from app.config import settings
 from app.middleware.auth import get_current_user, get_current_active_user
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
-# Create router
+# OAuth2 scheme for consistency with FastAPI pattern
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token")
+
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
 
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
 async def register_user(
     user_data: UserRegisterRequest,
-    request: Request,
-    db: AsyncSession = Depends(get_db_session)
+    request: Request
 ):
     """
-    Register a new user and return JWT tokens.
+    Register a new user account.
     
-    Args:
-        user_data: User registration data
-        request: FastAPI request object
-        db: Database session
-        
-    Returns:
-        TokenResponse: JWT tokens and user information
-        
-    Raises:
-        HTTPException: If registration fails
+    Creates a new user with the provided information and returns access and refresh tokens.
     """
+    logger.info(f"User registration attempt for email: {user_data.email}")
+    
     try:
         # Check if username already exists
-        result = await db.execute(select(User).where(User.username == user_data.username))
-        if result.scalar_one_or_none():
+        existing_user = await User.find_by_username(user_data.username)
+        if existing_user:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Username already registered"
             )
         
         # Check if email already exists
-        result = await db.execute(select(User).where(User.email == user_data.email))
-        if result.scalar_one_or_none():
+        existing_email = await User.find_by_email(user_data.email)
+        if existing_email:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Email already registered"
             )
         
-        # Hash password
+        # Hash the password
         hashed_password = get_password_hash(user_data.password)
         
-        # Create user
-        user = User(
-            username=user_data.username,
-            email=user_data.email,
+        # Create new user
+        new_user = User(
+            username=user_data.username.lower(),
+            email=user_data.email.lower(),
             hashed_password=hashed_password,
             first_name=user_data.first_name,
             last_name=user_data.last_name,
+            role=user_data.role or UserRole.VIEWER,  # Default to VIEWER if not specified
             is_active=True,
-            is_verified=False  # Email verification can be added later
+            is_verified=False
         )
         
-        db.add(user)
-        await db.commit()
-        await db.refresh(user)
+        await new_user.save()
+        logger.info(f"User created successfully: {new_user.username} (ID: {new_user.id})")
         
-        logger.info(f"User registered successfully: {user.username}")
+        # Create tokens
+        access_token = create_access_token(
+            data={"sub": str(new_user.id), "username": new_user.username, "role": new_user.role.value}
+        )
+        refresh_token = create_refresh_token(
+            data={"sub": str(new_user.id), "username": new_user.username, "role": new_user.role.value}
+        )
         
-        # Create tokens for automatic login after registration
-        access_token = create_access_token(data={"sub": str(user.id)})
-        refresh_token = create_refresh_token(data={"sub": str(user.id)})
-        
-        # Get client information
-        client_ip = request.client.host if request.client else "unknown"
-        user_agent = request.headers.get("user-agent", "unknown")
-        device_info = f"{user_agent} - {client_ip}"
-        
-        # Create session
-        session = UserSession(
-            user_id=user.id,
+        # Create user session
+        session = await UserSession.create_session(
+            user_id=str(new_user.id),
             session_token=access_token,
             refresh_token=refresh_token,
-            device_info=device_info,
-            ip_address=client_ip,
-            user_agent=user_agent,
-            expires_at=datetime.now(timezone.utc) + timedelta(minutes=30)  # Access token expiration
+            expires_in_minutes=settings.access_token_expire_minutes,
+            device_info=request.headers.get("User-Agent"),
+            ip_address=request.client.host if request.client else None,
+            user_agent=request.headers.get("User-Agent")
         )
         
-        db.add(session)
-        await db.commit()
+        logger.info(f"User session created: {session.id}")
         
         return TokenResponse(
             access_token=access_token,
             refresh_token=refresh_token,
             token_type="bearer",
-            expires_in=30 * 60,  # 30 minutes in seconds
-            user=UserResponse(
-                id=user.id,
-                username=user.username,
-                email=user.email,
-                first_name=user.first_name,
-                last_name=user.last_name,
-                is_active=user.is_active,
-                is_verified=user.is_verified,
-                created_at=user.created_at,
-                updated_at=user.updated_at
-            )
+            expires_in=settings.access_token_expire_minutes * 60,
+            user=UserResponse(**new_user.to_response_dict())
         )
         
-    except IntegrityError as e:
-        await db.rollback()
-        logger.error(f"User registration failed - integrity error: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Username or email already exists"
-        )
+    except HTTPException:
+        raise
     except Exception as e:
-        await db.rollback()
-        logger.error(f"User registration failed: {e}")
+        logger.error(f"Registration error: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Registration failed"
+            detail="Failed to create user account"
         )
 
 
 @router.post("/login", response_model=TokenResponse)
 async def login_user(
     login_data: UserLoginRequest,
-    request: Request,
-    db: AsyncSession = Depends(get_db_session)
+    request: Request
 ):
     """
-    Login user and return JWT tokens.
+    Authenticate user and return access tokens.
     
-    Args:
-        login_data: User login credentials
-        request: FastAPI request object
-        db: Database session
-        
-    Returns:
-        TokenResponse: JWT tokens and user information
-        
-    Raises:
-        HTTPException: If login fails
+    Validates user credentials and creates a new session with JWT tokens.
     """
+    logger.info(f"Login attempt for email: {login_data.email}")
+    
     try:
         # Get user by email
-        result = await db.execute(select(User).where(User.email == login_data.email))
-        user = result.scalar_one_or_none()
+        user = await User.find_by_email(login_data.email)
         
         if not user or not verify_password(login_data.password, user.hashed_password):
+            logger.warning(f"Failed login attempt for email: {login_data.email}")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Incorrect email or password",
@@ -188,113 +157,84 @@ async def login_user(
         if not user.is_active:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Account is deactivated",
-                headers={"WWW-Authenticate": "Bearer"},
+                detail="Account is deactivated"
             )
         
         # Create tokens
-        access_token = create_access_token(data={"sub": str(user.id)})
-        refresh_token = create_refresh_token(data={"sub": str(user.id)})
-        
-        # Get client information
-        client_ip = request.client.host if request.client else "unknown"
-        user_agent = request.headers.get("user-agent", "unknown")
-        device_info = f"{user_agent} - {client_ip}"
-        
-        # Create session
-        session = UserSession(
-            user_id=user.id,
-            session_token=access_token,
-            refresh_token=refresh_token,
-            device_info=device_info,
-            ip_address=client_ip,
-            user_agent=user_agent,
-            expires_at=datetime.now(timezone.utc) + timedelta(minutes=30)  # Access token expiration
+        access_token = create_access_token(
+            data={"sub": str(user.id), "username": user.username, "role": user.role.value}
+        )
+        refresh_token = create_refresh_token(
+            data={"sub": str(user.id), "username": user.username, "role": user.role.value}
         )
         
-        db.add(session)
-        await db.commit()
+        # Create user session
+        session = await UserSession.create_session(
+            user_id=str(user.id),
+            session_token=access_token,
+            refresh_token=refresh_token,
+            expires_in_minutes=settings.access_token_expire_minutes,
+            device_info=request.headers.get("User-Agent"),
+            ip_address=request.client.host if request.client else None,
+            user_agent=request.headers.get("User-Agent")
+        )
         
-        logger.info(f"User logged in successfully: {user.username}")
+        logger.info(f"User logged in successfully: {user.username} (Session: {session.id})")
         
         return TokenResponse(
             access_token=access_token,
             refresh_token=refresh_token,
             token_type="bearer",
-            expires_in=30 * 60,  # 30 minutes in seconds
-            user=UserResponse(
-                id=user.id,
-                username=user.username,
-                email=user.email,
-                first_name=user.first_name,
-                last_name=user.last_name,
-                is_active=user.is_active,
-                is_verified=user.is_verified,
-                created_at=user.created_at,
-                updated_at=user.updated_at
-            )
+            expires_in=settings.access_token_expire_minutes * 60,
+            user=UserResponse(**user.to_response_dict())
         )
         
     except HTTPException:
         raise
     except Exception as e:
-        await db.rollback()
-        logger.error(f"User login failed: {e}")
+        logger.error(f"Login error: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Login failed"
+            detail="Failed to authenticate user"
         )
 
 
 @router.post("/logout", response_model=SuccessResponse)
 async def logout_user(
     logout_data: LogoutRequest,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db_session)
+    current_user: User = Depends(get_current_user)
 ):
     """
-    Logout user and invalidate session(s).
+    Logout user by deactivating sessions.
     
-    Args:
-        logout_data: Logout configuration
-        current_user: Current authenticated user
-        db: Database session
-        
-    Returns:
-        SuccessResponse: Logout confirmation
+    Can logout from current device only or all devices.
     """
+    logger.info(f"Logout request for user: {current_user.username}")
+    
     try:
         if logout_data.logout_all_devices:
-            # Logout from all devices
-            await db.execute(
-                delete(UserSession).where(UserSession.user_id == current_user.id)
-            )
+            # Deactivate all sessions for the user
+            await current_user.deactivate_all_sessions()
             message = "Logged out from all devices"
         else:
-            # Logout from current session only
-            await db.execute(
-                delete(UserSession).where(
-                    UserSession.user_id == current_user.id,
-                    UserSession.is_active == True
-                )
-            )
+            # Deactivate only active sessions (current device)
+            active_sessions = await current_user.get_active_sessions()
+            for session in active_sessions:
+                await session.deactivate()
             message = "Logged out successfully"
         
-        await db.commit()
-        
-        logger.info(f"User logged out: {current_user.username} (all devices: {logout_data.logout_all_devices})")
+        logger.info(f"User logged out: {current_user.username}")
         
         return SuccessResponse(
             message=message,
-            timestamp=datetime.utcnow()
+            timestamp=datetime.now(timezone.utc)
         )
         
     except Exception as e:
-        await db.rollback()
-        logger.error(f"User logout failed: {e}")
+        logger.error(f"Logout error: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Logout failed"
+            detail="Failed to logout user"
         )
 
 
@@ -305,104 +245,74 @@ async def get_current_user_info(
     """
     Get current user information.
     
-    Args:
-        current_user: Current authenticated user
-        
-    Returns:
-        UserResponse: Current user information
+    Returns the authenticated user's profile information.
     """
-    return UserResponse(
-        id=current_user.id,
-        username=current_user.username,
-        email=current_user.email,
-        first_name=current_user.first_name,
-        last_name=current_user.last_name,
-        is_active=current_user.is_active,
-        is_verified=current_user.is_verified,
-        created_at=current_user.created_at,
-        updated_at=current_user.updated_at
-    )
+    return UserResponse(**current_user.to_response_dict())
 
 
-@router.put("/me", response_model=UserResponse)
-async def update_current_user(
+@router.patch("/me", response_model=UserResponse)
+async def update_user_profile(
     user_data: UserUpdateRequest,
-    current_user: User = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db_session)
+    current_user: User = Depends(get_current_active_user)
 ):
     """
-    Update current user information.
+    Update current user's profile information.
     
-    Args:
-        user_data: User update data
-        current_user: Current authenticated user
-        db: Database session
-        
-    Returns:
-        UserResponse: Updated user information
+    Allows updating first name, last name, and email.
     """
+    logger.info(f"Profile update request for user: {current_user.username}")
+    
     try:
         # Check if email is being changed and if it's already taken
         if user_data.email and user_data.email != current_user.email:
-            result = await db.execute(select(User).where(User.email == user_data.email))
-            if result.scalar_one_or_none():
+            existing_user = await User.find_by_email(user_data.email)
+            if existing_user:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="Email already registered"
                 )
-            current_user.email = user_data.email
         
-        # Update other fields
+        # Update user fields
+        update_data = {}
         if user_data.first_name is not None:
-            current_user.first_name = user_data.first_name
+            update_data["first_name"] = user_data.first_name
         if user_data.last_name is not None:
-            current_user.last_name = user_data.last_name
+            update_data["last_name"] = user_data.last_name
+        if user_data.email is not None:
+            update_data["email"] = user_data.email.lower()
         
-        await db.commit()
-        await db.refresh(current_user)
+        if update_data:
+            await current_user.update_with_timestamp(update_data)
+            # Reload user to get updated data (convert string ID to ObjectId)
+            updated_user = await User.find_by_id(str(current_user.id))
+            logger.info(f"User profile updated: {current_user.username}")
+            return UserResponse(**updated_user.to_response_dict())
         
-        logger.info(f"User updated successfully: {current_user.username}")
-        
-        return UserResponse(
-            id=current_user.id,
-            username=current_user.username,
-            email=current_user.email,
-            first_name=current_user.first_name,
-            last_name=current_user.last_name,
-            is_active=current_user.is_active,
-            is_verified=current_user.is_verified,
-            created_at=current_user.created_at,
-            updated_at=current_user.updated_at
-        )
+        # No changes made
+        return UserResponse(**current_user.to_response_dict())
         
     except HTTPException:
         raise
     except Exception as e:
-        await db.rollback()
-        logger.error(f"User update failed: {e}")
+        logger.error(f"Profile update error: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Update failed"
+            detail="Failed to update user profile"
         )
 
 
 @router.post("/change-password", response_model=SuccessResponse)
 async def change_password(
     password_data: PasswordChangeRequest,
-    current_user: User = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db_session)
+    current_user: User = Depends(get_current_active_user)
 ):
     """
-    Change user password.
+    Change user's password.
     
-    Args:
-        password_data: Password change data
-        current_user: Current authenticated user
-        db: Database session
-        
-    Returns:
-        SuccessResponse: Password change confirmation
+    Requires current password verification and deactivates all sessions.
     """
+    logger.info(f"Password change request for user: {current_user.username}")
+    
     try:
         # Verify current password
         if not verify_password(password_data.current_password, current_user.hashed_password):
@@ -415,187 +325,141 @@ async def change_password(
         new_hashed_password = get_password_hash(password_data.new_password)
         
         # Update password
-        current_user.hashed_password = new_hashed_password
-        await db.commit()
+        await current_user.update_with_timestamp({"hashed_password": new_hashed_password})
         
-        # Logout from all devices for security
-        await db.execute(
-            delete(UserSession).where(UserSession.user_id == current_user.id)
-        )
-        await db.commit()
+        # Deactivate all sessions for security
+        await current_user.deactivate_all_sessions()
         
-        logger.info(f"Password changed successfully for user: {current_user.username}")
+        logger.info(f"Password changed for user: {current_user.username}")
         
         return SuccessResponse(
             message="Password changed successfully. Please login again.",
-            timestamp=datetime.utcnow()
+            timestamp=datetime.now(timezone.utc)
         )
         
     except HTTPException:
         raise
     except Exception as e:
-        await db.rollback()
-        logger.error(f"Password change failed: {e}")
+        logger.error(f"Password change error: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Password change failed"
+            detail="Failed to change password"
         )
 
 
 @router.get("/sessions", response_model=UserSessionsResponse)
 async def get_user_sessions(
-    current_user: User = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db_session)
+    current_user: User = Depends(get_current_active_user)
 ):
     """
     Get user's active sessions.
     
-    Args:
-        current_user: Current authenticated user
-        db: Database session
-        
-    Returns:
-        UserSessionsResponse: User's active sessions
+    Returns information about all active sessions for the current user.
     """
     try:
-        result = await db.execute(
-            select(UserSession).where(
-                UserSession.user_id == current_user.id,
-                UserSession.is_active == True
-            ).order_by(UserSession.created_at.desc())
-        )
-        sessions = result.scalars().all()
+        sessions = await UserSession.get_user_sessions(str(current_user.id), active_only=True)
         
-        session_info_list = []
-        for session in sessions:
-            session_info_list.append(SessionInfo(
-                session_id=session.id,
-                device_info=session.device_info,
-                ip_address=session.ip_address,
-                user_agent=session.user_agent,
-                is_active=session.is_active,
-                created_at=session.created_at,
-                last_used_at=session.last_used_at,
-                expires_at=session.expires_at
-            ))
+        session_info = [
+            SessionInfo(**session.to_response_dict())
+            for session in sessions
+        ]
         
         return UserSessionsResponse(
-            sessions=session_info_list,
-            total_sessions=len(session_info_list)
+            sessions=session_info,
+            total_sessions=len(session_info)
         )
         
     except Exception as e:
-        logger.error(f"Failed to get user sessions: {e}")
+        logger.error(f"Get sessions error: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to retrieve sessions"
+            detail="Failed to retrieve user sessions"
         )
 
 
-class RefreshTokenRequest(BaseModel):
-    """Refresh token request model."""
-    refresh_token: str = Field(..., description="Refresh token")
-
 @router.post("/refresh", response_model=TokenResponse)
-async def refresh_token(
-    token_data: RefreshTokenRequest,
-    request: Request,
-    db: AsyncSession = Depends(get_db_session)
+async def refresh_access_token(
+    refresh_token_data: RefreshTokenRequest,
+    request: Request
 ):
     """
     Refresh access token using refresh token.
     
-    Args:
-        refresh_token: The refresh token
-        request: FastAPI request object
-        db: Database session
-        
-    Returns:
-        TokenResponse: New JWT tokens
+    Validates refresh token and issues new access and refresh tokens.
     """
     try:
+        refresh_token = refresh_token_data.refresh_token
+        
         # Verify refresh token
-        payload = verify_token(token_data.refresh_token, token_type="refresh")
-        user_id_str = payload.get("sub")
-        
-        if user_id_str is None:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid refresh token"
-            )
-        
-        # Convert user_id from string to integer
         try:
-            user_id = int(user_id_str)
-        except (ValueError, TypeError):
+            payload = verify_token(refresh_token)
+            user_id = payload.get("sub")
+            if not user_id:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid refresh token"
+                )
+        except Exception:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid refresh token"
             )
         
-        # Get user
-        result = await db.execute(select(User).where(User.id == user_id))
-        user = result.scalar_one_or_none()
-        
-        if not user or not user.is_active:
+        # Get user (convert string ID to ObjectId)
+        user = await User.find_by_id(user_id)
+        if not user:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid refresh token"
+                detail="User not found"
             )
         
-        # Verify session exists and is active
-        session_result = await db.execute(
-            select(UserSession).where(
-                UserSession.user_id == user_id,
-                UserSession.refresh_token == token_data.refresh_token,
-                UserSession.is_active == True
-            )
-        )
-        session = session_result.scalar_one_or_none()
-        
-        if not session or session.is_expired:
+        if not user.is_active:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid refresh token"
+                detail="Account is deactivated"
+            )
+        
+        # Find session with this refresh token
+        session = await UserSession.find_by_refresh_token(refresh_token)
+        if not session or not session.is_valid:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid or expired refresh token"
             )
         
         # Create new tokens
-        new_access_token = create_access_token(data={"sub": str(user.id)})
-        new_refresh_token = create_refresh_token(data={"sub": str(user.id)})
+        new_access_token = create_access_token(
+            data={"sub": str(user.id), "username": user.username, "role": user.role.value}
+        )
+        new_refresh_token = create_refresh_token(
+            data={"sub": str(user.id), "username": user.username, "role": user.role.value}
+        )
         
-        # Update session
-        session.session_token = new_access_token
-        session.refresh_token = new_refresh_token
-        session.expires_at = datetime.now(timezone.utc) + timedelta(minutes=30)  # Access token expiration
+        # Update session with new tokens
+        await session.update_with_timestamp({
+            "session_token": new_access_token,
+            "refresh_token": new_refresh_token,
+            "last_used_at": datetime.now(timezone.utc)
+        })
         
-        await db.commit()
-        
-        logger.info(f"Token refreshed for user: {user.username}")
+        logger.info(f"Tokens refreshed for user: {user.username}")
         
         return TokenResponse(
             access_token=new_access_token,
             refresh_token=new_refresh_token,
             token_type="bearer",
-            expires_in=30 * 60,
-            user=UserResponse(
-                id=user.id,
-                username=user.username,
-                email=user.email,
-                first_name=user.first_name,
-                last_name=user.last_name,
-                is_active=user.is_active,
-                is_verified=user.is_verified,
-                created_at=user.created_at,
-                updated_at=user.updated_at
-            )
+            expires_in=settings.access_token_expire_minutes * 60,
+            user=UserResponse(**user.to_response_dict())
         )
         
     except HTTPException:
         raise
     except Exception as e:
-        await db.rollback()
-        logger.error(f"Token refresh failed: {e}")
+        logger.error(f"Token refresh error: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Token refresh failed"
+            detail="Failed to refresh token"
         )
+
+
+# Authentication dependencies imported above

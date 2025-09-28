@@ -24,6 +24,13 @@ export const DocumentType = {
 
 export type DocumentType = (typeof DocumentType)[keyof typeof DocumentType];
 
+export const UserRole = {
+  ADMIN: "admin",
+  VIEWER: "viewer",
+} as const;
+
+export type UserRole = (typeof UserRole)[keyof typeof UserRole];
+
 export interface DocumentUploadRequest {
   filename: string;
   document_type: DocumentType;
@@ -59,6 +66,7 @@ export interface UserRegisterRequest {
   password: string;
   first_name?: string;
   last_name?: string;
+  role?: UserRole;
 }
 
 export interface UserLoginRequest {
@@ -75,11 +83,12 @@ export interface TokenResponse {
 }
 
 export interface UserResponse {
-  id: number;
+  id: string;
   username: string;
   email: string;
   first_name?: string;
   last_name?: string;
+  role: UserRole;
   is_active: boolean;
   is_verified: boolean;
   created_at: string;

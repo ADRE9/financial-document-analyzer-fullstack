@@ -479,13 +479,85 @@ pnpm dev
 4. **Periodic Scans**: Run deprecation checks on entire codebase monthly
 5. **Dependency Updates**: Check for deprecated dependencies in requirements
 
+## Bug Tracking System
+
+### Critical Rule: Track Every Bug
+
+**Every single line of code in this repository contains bugs, inefficiencies, or poor practices.** This is not an exaggeration - scrutinize each line of code and track every issue found.
+
+### Bug Tracking Workflow
+
+1. **Discovery Phase**:
+
+   - When finding any bug, inefficiency, or poor practice, immediately document it
+   - Use the bug tracker format in `memory-bank/bugTracker.md`
+   - Assign unique ID (BUG-XXX format)
+   - Categorize by priority and type
+   - Include file location and line numbers
+
+2. **Documentation Requirements**:
+
+   - Clear description of the issue
+   - Steps to reproduce (if applicable)
+   - Expected vs actual behavior
+   - Impact assessment
+   - Discovery date and context
+
+3. **Resolution Process**:
+
+   - Update bug status to "In Progress" when starting work
+   - Document the fix approach and implementation
+   - Test the fix thoroughly
+   - Update status to "Fixed" when complete
+   - Add verification notes and test results
+
+4. **Regular Maintenance**:
+   - Review open bugs weekly
+   - Prioritize based on impact and user experience
+   - Update progress regularly
+   - Archive resolved bugs monthly
+
+### Bug Categories & Priorities
+
+- **🔴 Critical**: System-breaking bugs that prevent core functionality
+- **🟠 High**: Major issues that significantly impact user experience or system stability
+- **🟡 Medium**: Issues that affect functionality but have workarounds
+- **🟢 Low**: Minor issues, code quality improvements, or optimizations
+- **📝 Documentation**: Issues with documentation, comments, or code clarity
+
+### Bug Status Tracking
+
+- **🐛 Open**: Bug discovered but not yet addressed
+- **🔧 In Progress**: Currently being worked on
+- **✅ Fixed**: Bug resolved and verified
+- **❌ Won't Fix**: Bug acknowledged but not fixing (with reason)
+- **🔄 Verified**: Fix verified and working correctly
+
+### Integration with Development Workflow
+
+- **Before Starting Work**: Check bug tracker for known issues in the area
+- **During Development**: Document any new bugs found immediately
+- **After Fixing**: Update bug tracker with resolution details
+- **Code Review**: Verify no new bugs introduced
+- **Testing**: Ensure fixes don't break existing functionality
+
+### Memory Bank Integration
+
+- Bug tracker is part of the memory bank system
+- Always read `memory-bank/bugTracker.md` at start of each session
+- Update bug tracker when making significant changes
+- Use bug tracker to guide development priorities
+
 ## Development Notes
 
 - Always check memory bank files for current context
+- **ALWAYS check bug tracker before starting any work**
 - Update progress.md after significant changes
+- Update bug tracker when finding or fixing issues
 - Follow the established patterns for consistency
 - Test thoroughly before marking tasks complete
 - Document any new patterns or decisions in .cursorrules
 - **React Compliance**: Ensure all components follow React 19 best practices
 - **Code Review**: Check for React.FC usage, unnecessary React imports, hook violations
 - **Deprecation Prevention**: Always use latest recommended patterns, never deprecated functions
+- **Bug Tracking**: Document every issue found, no matter how small

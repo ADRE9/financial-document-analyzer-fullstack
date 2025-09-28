@@ -1,7 +1,8 @@
 """
-JWT token management utilities.
+JWT token management utilities following FastAPI OAuth2 with Password (and hashing) pattern.
 
-This module provides JWT token creation, verification, and management functions.
+This module provides JWT token creation, verification, and management functions
+following the FastAPI documentation recommendations.
 """
 
 import logging
@@ -24,7 +25,7 @@ REFRESH_TOKEN_EXPIRE_DAYS = settings.refresh_token_expire_days
 
 def create_access_token(data: Dict[str, Any], expires_delta: Optional[timedelta] = None) -> str:
     """
-    Create a JWT access token.
+    Create a JWT access token following FastAPI OAuth2 pattern.
     
     Args:
         data: The data to encode in the token
@@ -40,7 +41,7 @@ def create_access_token(data: Dict[str, Any], expires_delta: Optional[timedelta]
     else:
         expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     
-    to_encode.update({"exp": expire, "type": "access"})
+    to_encode.update({"exp": expire})
     
     try:
         encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
@@ -78,13 +79,13 @@ def create_refresh_token(data: Dict[str, Any]) -> str:
         )
 
 
-def verify_token(token: str, token_type: str = "access") -> Dict[str, Any]:
+def verify_token(token: str, token_type: Optional[str] = None) -> Dict[str, Any]:
     """
-    Verify and decode a JWT token.
+    Verify and decode a JWT token following FastAPI OAuth2 pattern.
     
     Args:
         token: The JWT token to verify
-        token_type: The expected token type ("access" or "refresh")
+        token_type: Optional token type to validate ("access" or "refresh")
         
     Returns:
         Dict: The decoded token payload
@@ -92,42 +93,31 @@ def verify_token(token: str, token_type: str = "access") -> Dict[str, Any]:
     Raises:
         HTTPException: If token is invalid or expired
     """
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: str = payload.get("sub")
+        if user_id is None:
+            raise credentials_exception
         
-        # Check token type
-        if payload.get("type") != token_type:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=f"Invalid token type. Expected {token_type}",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-        
-        # Check expiration
-        exp = payload.get("exp")
-        if exp is None:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Token missing expiration",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-        
-        if datetime.now(timezone.utc) > datetime.fromtimestamp(exp, tz=timezone.utc):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Token expired",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
+        # Check token type if specified
+        if token_type == "refresh":
+            if payload.get("type") != "refresh":
+                raise credentials_exception
+        elif token_type == "access":
+            # Access tokens should not have a type field or should be "access"
+            token_type_field = payload.get("type")
+            if token_type_field is not None and token_type_field != "access":
+                raise credentials_exception
         
         return payload
-        
-    except JWTError as e:
-        logger.error(f"JWT verification failed: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+    except JWTError:
+        raise credentials_exception
 
 
 def decode_token(token: str) -> Optional[Dict[str, Any]]:
@@ -162,7 +152,7 @@ def get_token_expiration(token: str) -> Optional[datetime]:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         exp = payload.get("exp")
         if exp:
-            return datetime.fromtimestamp(exp)
+            return datetime.fromtimestamp(exp, tz=timezone.utc)
         return None
     except JWTError:
         return None

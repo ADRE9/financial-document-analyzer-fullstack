@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, ConfigDict, EmailStr, validator
+from pydantic import BaseModel, Field, ConfigDict, EmailStr, field_validator
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 from enum import Enum
@@ -28,6 +28,12 @@ class DocumentType(str, Enum):
     STATEMENT = "statement"
     CONTRACT = "contract"
     OTHER = "other"
+
+
+class UserRole(str, Enum):
+    """User role enumeration for role-based access control."""
+    ADMIN = "admin"
+    VIEWER = "viewer"
 
 
 class DocumentUploadRequest(BaseModel):
@@ -77,15 +83,18 @@ class UserRegisterRequest(BaseModel):
     password: str = Field(..., min_length=8, max_length=20, description="Password (8-20 characters)")
     first_name: Optional[str] = Field(None, max_length=100, description="First name")
     last_name: Optional[str] = Field(None, max_length=100, description="Last name")
+    role: Optional[UserRole] = Field(UserRole.VIEWER, description="User role (Admin or Viewer, defaults to Viewer)")
     
-    @validator('username')
+    @field_validator('username')
+    @classmethod
     def validate_username(cls, v):
         """Validate username format."""
         if not re.match(r'^[a-zA-Z0-9_-]+$', v):
             raise ValueError('Username can only contain letters, numbers, underscores, and hyphens')
         return v.lower()
     
-    @validator('password')
+    @field_validator('password')
+    @classmethod
     def validate_password(cls, v):
         """Validate password strength."""
         if len(v) < 8:
@@ -125,11 +134,12 @@ class UserResponse(BaseModel):
     """User response model."""
     model_config = ConfigDict(json_encoders={datetime: lambda v: v.isoformat()})
     
-    id: int
+    id: str  # MongoDB ObjectId as string
     username: str
     email: str
     first_name: Optional[str] = None
     last_name: Optional[str] = None
+    role: UserRole
     is_active: bool
     is_verified: bool
     created_at: datetime
@@ -148,7 +158,8 @@ class PasswordChangeRequest(BaseModel):
     current_password: str = Field(..., description="Current password")
     new_password: str = Field(..., min_length=8, max_length=20, description="New password (8-20 characters)")
     
-    @validator('new_password')
+    @field_validator('new_password')
+    @classmethod
     def validate_new_password(cls, v):
         """Validate new password strength."""
         if len(v) < 8:
@@ -167,6 +178,11 @@ class PasswordChangeRequest(BaseModel):
         return v
 
 
+class RefreshTokenRequest(BaseModel):
+    """Refresh token request model."""
+    refresh_token: str = Field(..., description="Refresh token")
+
+
 class LogoutRequest(BaseModel):
     """Logout request model."""
     logout_all_devices: bool = Field(False, description="Logout from all devices")
@@ -176,7 +192,7 @@ class SessionInfo(BaseModel):
     """Session information model."""
     model_config = ConfigDict(json_encoders={datetime: lambda v: v.isoformat()})
     
-    session_id: int
+    session_id: str  # MongoDB ObjectId as string
     device_info: Optional[str] = None
     ip_address: Optional[str] = None
     user_agent: Optional[str] = None

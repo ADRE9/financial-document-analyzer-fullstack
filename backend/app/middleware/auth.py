@@ -1,26 +1,27 @@
 """
-Authentication middleware and dependencies.
+Authentication middleware and dependencies for MongoDB/Beanie.
 
-This module provides authentication middleware and FastAPI dependencies for protected routes.
+This module provides authentication middleware and FastAPI dependencies for protected routes
+using MongoDB and Beanie ODM.
 """
 
 import logging
 from typing import Optional
 from fastapi import Depends, HTTPException, status, Request
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials, OAuth2PasswordBearer
 
-from app.database import get_db_session
 from app.models.user import User, UserSession
 from app.utils.jwt import verify_token
-from app.models.schemas import UserResponse
+from app.models.schemas import UserResponse, UserRole
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
 # HTTP Bearer token scheme
 security = HTTPBearer()
+
+# OAuth2 scheme for FastAPI pattern
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token")
 
 
 class AuthMiddleware:
@@ -54,15 +55,13 @@ class AuthMiddleware:
 
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: AsyncSession = Depends(get_db_session)
+    credentials: HTTPAuthorizationCredentials = Depends(security)
 ) -> User:
     """
     Get the current authenticated user from JWT token.
     
     Args:
         credentials: HTTP Bearer credentials
-        db: Database session
         
     Returns:
         User: The authenticated user
@@ -84,15 +83,8 @@ async def get_current_user(
         if user_id_str is None:
             raise credentials_exception
         
-        # Convert user_id from string to integer
-        try:
-            user_id = int(user_id_str)
-        except (ValueError, TypeError):
-            raise credentials_exception
-        
-        # Get user from database
-        result = await db.execute(select(User).where(User.id == user_id))
-        user = result.scalar_one_or_none()
+        # Get user from MongoDB using Beanie (convert string ID to ObjectId)
+        user = await User.find_by_id(user_id_str)
         
         if user is None:
             raise credentials_exception
@@ -106,16 +98,9 @@ async def get_current_user(
             )
         
         # Verify session is still active
-        session_result = await db.execute(
-            select(UserSession).where(
-                UserSession.user_id == user_id,
-                UserSession.session_token == credentials.credentials,
-                UserSession.is_active == True
-            )
-        )
-        session = session_result.scalar_one_or_none()
+        session = await UserSession.find_by_token(credentials.credentials)
         
-        if session is None or session.is_expired:
+        if session is None or not session.is_valid:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Session expired or invalid",
@@ -123,9 +108,8 @@ async def get_current_user(
             )
         
         # Update last used timestamp
-        from sqlalchemy import func
-        session.last_used_at = func.now()
-        await db.commit()
+        from datetime import datetime, timezone
+        await session.update_with_timestamp({"last_used_at": datetime.now(timezone.utc)})
         
         return user
         
@@ -160,15 +144,13 @@ async def get_current_active_user(
 
 
 async def get_current_user_optional(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False)),
-    db: AsyncSession = Depends(get_db_session)
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False))
 ) -> Optional[User]:
     """
     Get the current user if authenticated, otherwise return None.
     
     Args:
         credentials: Optional HTTP Bearer credentials
-        db: Database session
         
     Returns:
         Optional[User]: The authenticated user or None
@@ -177,27 +159,147 @@ async def get_current_user_optional(
         return None
     
     try:
-        return await get_current_user(credentials, db)
+        return await get_current_user(credentials)
     except HTTPException:
         return None
 
 
-def require_permissions(*permissions: str):
+async def get_current_user_oauth2(token: str = Depends(oauth2_scheme)) -> User:
     """
-    Decorator to require specific permissions for a route.
+    Get the current authenticated user from JWT token using OAuth2 pattern.
+    
+    This follows the FastAPI OAuth2 with Password pattern exactly.
     
     Args:
-        *permissions: Required permissions
+        token: The JWT token from OAuth2PasswordBearer
+        
+    Returns:
+        User: The authenticated user
+        
+    Raises:
+        HTTPException: If authentication fails
+    """
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    
+    try:
+        payload = verify_token(token)
+        username: str = payload.get("sub")
+        if username is None:
+            raise credentials_exception
+    except Exception:
+        raise credentials_exception
+    
+    user = await User.find_by_username(username)
+    if user is None:
+        raise credentials_exception
+    
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Inactive user",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    return user
+
+
+async def get_current_active_user_oauth2(current_user: User = Depends(get_current_user_oauth2)) -> User:
+    """
+    Get the current active user using OAuth2 pattern.
+    
+    Args:
+        current_user: The current user from get_current_user_oauth2
+        
+    Returns:
+        User: The active user
+        
+    Raises:
+        HTTPException: If user is not active
+    """
+    if not current_user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Inactive user"
+        )
+    return current_user
+
+
+async def get_current_admin_user(
+    current_user: User = Depends(get_current_active_user)
+) -> User:
+    """
+    Get the current user and verify they have admin role.
+    
+    Args:
+        current_user: The current active user
+        
+    Returns:
+        User: The admin user
+        
+    Raises:
+        HTTPException: If user doesn't have admin role
+    """
+    if not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Insufficient permissions. Admin role required."
+        )
+    return current_user
+
+
+async def get_current_viewer_user(
+    current_user: User = Depends(get_current_active_user)
+) -> User:
+    """
+    Get the current user and verify they have viewer role or higher.
+    
+    Args:
+        current_user: The current active user
+        
+    Returns:
+        User: The user with viewer permissions or higher
+        
+    Raises:
+        HTTPException: If user doesn't have appropriate role
+    """
+    if not (current_user.is_viewer or current_user.is_admin):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Insufficient permissions. Viewer role or higher required."
+        )
+    return current_user
+
+
+def require_role(required_role: UserRole):
+    """
+    Dependency function to require a specific role for a route.
+    
+    Args:
+        required_role: The role required to access the route
         
     Returns:
         Dependency function
     """
-    async def permission_checker(current_user: User = Depends(get_current_user)):
-        # For now, all authenticated users have all permissions
-        # This can be extended with role-based permissions
+    async def role_checker(current_user: User = Depends(get_current_active_user)):
+        if required_role == UserRole.ADMIN:
+            if not current_user.is_admin:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Admin role required"
+                )
+        elif required_role == UserRole.VIEWER:
+            if not (current_user.is_viewer or current_user.is_admin):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Viewer role or higher required"
+                )
         return current_user
     
-    return permission_checker
+    return role_checker
 
 
 def require_admin():
@@ -205,11 +307,16 @@ def require_admin():
     Decorator to require admin privileges for a route.
     
     Returns:
-        Dependency function
+        Dependency function that checks for admin role
     """
-    async def admin_checker(current_user: User = Depends(get_current_user)):
-        # For now, all authenticated users are considered admins
-        # This can be extended with proper role checking
-        return current_user
+    return require_role(UserRole.ADMIN)
+
+
+def require_viewer():
+    """
+    Decorator to require viewer privileges or higher for a route.
     
-    return admin_checker
+    Returns:
+        Dependency function that checks for viewer role or higher
+    """
+    return require_role(UserRole.VIEWER)

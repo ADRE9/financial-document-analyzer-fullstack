@@ -4,6 +4,14 @@ import { useNavigate } from "react-router";
 import { useCurrentUser, useLogout } from "../hooks/useAuth";
 import { tokenManager } from "../utils/tokenManager";
 import { AuthContext, type AuthContextType } from "./AuthContextDefinition";
+import { UserRole } from "../types/api";
+import {
+  isAdmin,
+  isViewer,
+  hasRole as checkRole,
+  hasAdminAccess as checkAdminAccess,
+  hasViewerAccess as checkViewerAccess,
+} from "../utils/roleUtils";
 
 interface AuthProviderProps {
   children: ReactNode;
@@ -56,12 +64,20 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     logoutMutation.mutate({});
   };
 
+  const hasRole = (role: UserRole) => checkRole(user || null, role);
+
   const value: AuthContextType = {
     user: user || null,
     isLoading,
     isAuthenticated: tokenManager.isAuthenticated() && !!user,
     logout,
     error,
+    // Role checking methods
+    isAdmin: isAdmin(user || null),
+    isViewer: isViewer(user || null),
+    hasRole,
+    hasAdminAccess: checkAdminAccess(user || null),
+    hasViewerAccess: checkViewerAccess(user || null),
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
