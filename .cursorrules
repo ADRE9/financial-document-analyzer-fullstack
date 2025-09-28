@@ -2,14 +2,19 @@
 
 ## Project Overview
 
-This is a full-stack financial document analyzer built with FastAPI (Python) backend and React (TypeScript) frontend. The system processes financial documents (invoices, receipts, statements, contracts) and extracts structured data using AI/ML capabilities.
+This is a comprehensive financial document analysis system that processes corporate reports, financial statements, and investment documents using AI-powered analysis agents. This is a production-grade system that requires enterprise-level thinking and implementation.
+
+## CRITICAL WARNING
+
+**Every single line of code in this repository contains bugs, inefficiencies, or poor practices.** This is not an exaggeration - scrutinize each line of code.
 
 ## Current Status
 
-- **Phase**: Database setup and core integration
-- **Branch**: `feat/db-setup`
-- **Completion**: ~30% (infrastructure complete, core features pending)
-- **Key Issue**: All endpoints return mock data, no database integration yet
+- **Phase**: FULL-TIME CHALLENGE ACTIVATED - Complete System Transformation
+- **Branch**: `feat/user-authentication` (current), `feat/db-setup` (completed)
+- **Completion**: ~15% (infrastructure complete, but ALL code contains bugs and needs fixing)
+- **Challenge Level**: Enterprise-grade production system with AI integration
+- **Key Issue**: Every line of code needs debugging and optimization
 
 ## Architecture Patterns
 
@@ -27,6 +32,8 @@ This is a full-stack financial document analyzer built with FastAPI (Python) bac
 - **Type Safety**: Strong TypeScript typing throughout
 - **Build System**: Vite for fast development and building
 - **State Management**: React hooks (no external state management yet)
+- **React Version**: React 19 with latest best practices
+- **Modern Patterns**: Functional components, hooks, context API
 
 ## Key Implementation Details
 
@@ -65,6 +72,8 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
 
+**CRITICAL**: During development, never run the backend detached (with &, nohup, or in background). Always run in foreground so it stops when terminal closes or Ctrl+C is pressed. In production, detached processes are acceptable.
+
 ### Frontend Development
 
 ```bash
@@ -79,21 +88,104 @@ pnpm dev
 - Frontend: http://localhost:5173
 - API Docs: http://localhost:8000/docs (when debug=True)
 
+## Challenge Requirements
+
+### Primary Objectives (MANDATORY)
+
+1. **Debug & Fix All Issues**: Find and resolve every bug in the codebase
+2. **Performance Optimization**: Identify and fix all inefficient code patterns
+3. **Production Readiness**: Make the system enterprise-ready with working frontend and backend
+
+### Advanced Complexity Requirements (EXPECTED)
+
+#### **Security & Authentication**
+
+- Implement JWT-based authentication system
+- Add role-based access control (Admin, Viewer)
+- API rate limiting and request validation
+- Input sanitization and file upload security
+- Secure environment variable management
+
+#### **Database Integration**
+
+- Design and implement database schema for:
+  - User management and authentication
+  - Document storage and metadata
+  - Analysis results and history
+  - Audit logs and system monitoring
+- Database connection pooling and optimization
+- **Preferred**: MongoDB, but any database with good reasoning
+
+#### **Frontend Integration (MANDATORY)**
+
+- Build a complete web application frontend using modern framework (React, Vue.js, or Angular)
+- **Preferred (not mandatory):** TailwindCSS for styling and shadcn/ui components for enhanced UI
+- Real-time file upload with progress indicators
+- Interactive dashboards for financial analysis results
+- User authentication and session management on frontend
+- Document management interface (upload, view, delete, search)
+- Analysis history and results visualization
+- Export functionality with download capabilities
+- Error handling and user feedback systems
+
+#### **Performance & Scalability**
+
+- Implement Redis caching for frequently accessed data
+- Add background job processing with Redis or Celery or other job queue system
+- Database query optimization and indexing
+- Memory-efficient document processing
+- Async/await patterns throughout the codebase
+
+#### **Monitoring & Observability**
+
+- Add LLM Observability Tools to the codebase to monitor the LLM calls and the tools calls
+
+### Edge Cases & Advanced Scenarios (CRITICAL FOR EVALUATION)
+
+#### **Document Processing Edge Cases**
+
+- Corrupted or password-protected PDFs
+- Documents larger than 100MB
+- Non-English financial documents
+- Scanned documents with poor OCR quality
+- Documents with complex tables and charts
+
+#### **API & System Edge Cases**
+
+- Concurrent file uploads from multiple users
+- Network timeouts during long analysis processes
+- Memory exhaustion with large documents
+- Database connection failures during analysis
+- API rate limit exceeded scenarios
+- Invalid file formats and malicious uploads
+- Extremely long user queries or prompts
+
+#### **Frontend & User Experience Edge Cases**
+
+- File upload failures with proper error recovery
+- Large file uploads exceeding browser memory limits
+- Simultaneous document processing and UI responsiveness
+- Cross-origin resource sharing (CORS) issues
+
 ## Critical Next Steps
 
 ### Immediate Priorities
 
-1. **Database Integration**: Set up PostgreSQL with SQLAlchemy models
-2. **Document Processing**: Integrate OCR library (Tesseract/PaddleOCR)
-3. **Frontend Integration**: Connect React to real API endpoints
-4. **Testing**: Add comprehensive test suite
+1. **Code Analysis**: Conduct comprehensive analysis to identify ALL bugs and inefficiencies
+2. **Database Integration**: Set up MongoDB/PostgreSQL with proper schema design
+3. **CrewAI Integration**: Integrate CrewAI 0.130.0 for AI-powered document analysis
+4. **Frontend Integration**: Connect React to real API endpoints with complete UI
+5. **Security Implementation**: JWT authentication, role-based access control, API security
+6. **Testing**: Add comprehensive test suite for all components
 
 ### Technical Decisions Needed
 
-- **Database**: PostgreSQL for production, SQLite for development
-- **OCR Engine**: Tesseract vs PaddleOCR vs cloud-based solutions
-- **Document Processing**: Sync vs async processing for large files
-- **Authentication**: JWT implementation strategy
+- **Database**: MongoDB (preferred) or PostgreSQL with proper reasoning
+- **AI Engine**: CrewAI 0.130.0 for document analysis and investment recommendations
+- **Document Processing**: Async processing for large files with progress tracking
+- **Authentication**: JWT implementation with role-based access control
+- **Caching**: Redis for performance optimization
+- **Monitoring**: LLM Observability Tools for AI call monitoring
 
 ## Code Quality Standards
 
@@ -110,6 +202,12 @@ pnpm dev
 - Implement proper error boundaries
 - Use Radix UI for accessible components
 - Follow React hooks patterns for state management
+- **React 19 Compliance**: Follow latest React documentation patterns
+- **Component Patterns**: Use functional components, avoid React.FC
+- **Import Patterns**: Use named imports, avoid default React import
+- **Hook Rules**: Follow rules of hooks (only at top level, only in React functions)
+- **Context Patterns**: Use createContext with proper TypeScript typing
+- **Performance**: Use useMemo, useCallback for expensive operations
 
 ## Common Patterns
 
@@ -148,6 +246,239 @@ pnpm dev
 3. Create API service layer in frontend
 4. Add pytest for backend, Jest for frontend
 
+## React 19 Best Practices & Compliance
+
+### Component Patterns
+
+1. **Functional Components Only**
+
+   ```tsx
+   // ✅ Good - Modern functional component
+   const MyComponent = ({ children }: Props) => {
+     return <div>{children}</div>;
+   };
+
+   // ❌ Avoid - React.FC is discouraged
+   const MyComponent: React.FC<Props> = ({ children }) => {
+     return <div>{children}</div>;
+   };
+   ```
+
+2. **Import Patterns**
+
+   ```tsx
+   // ✅ Good - Named imports only
+   import { useState, useEffect } from "react";
+   import type { ReactNode } from "react";
+
+   // ❌ Avoid - Default React import (unnecessary in React 17+)
+   import React, { useState, useEffect } from "react";
+   ```
+
+3. **Hook Usage**
+
+   ```tsx
+   // ✅ Good - Hooks at top level
+   const MyComponent = () => {
+     const [state, setState] = useState(initialValue);
+     const { data, isLoading } = useQuery();
+
+     useEffect(() => {
+       // side effects
+     }, []);
+
+     return <div>Content</div>;
+   };
+   ```
+
+4. **Context Patterns**
+
+   ```tsx
+   // ✅ Good - Proper context with TypeScript
+   interface ContextType {
+     value: string;
+     setValue: (value: string) => void;
+   }
+
+   const MyContext = createContext<ContextType | undefined>(undefined);
+
+   export const MyProvider = ({ children }: { children: ReactNode }) => {
+     const [value, setValue] = useState("");
+     return (
+       <MyContext.Provider value={{ value, setValue }}>
+         {children}
+       </MyContext.Provider>
+     );
+   };
+   ```
+
+5. **Custom Hooks**
+   ```tsx
+   // ✅ Good - Custom hook with proper error handling
+   export const useAuth = () => {
+     const context = useContext(AuthContext);
+     if (context === undefined) {
+       throw new Error("useAuth must be used within an AuthProvider");
+     }
+     return context;
+   };
+   ```
+
+### Performance Optimization
+
+1. **Memoization**
+
+   ```tsx
+   // ✅ Use useMemo for expensive calculations
+   const expensiveValue = useMemo(() => {
+     return heavyCalculation(data);
+   }, [data]);
+
+   // ✅ Use useCallback for stable function references
+   const handleClick = useCallback(() => {
+     doSomething();
+   }, [dependency]);
+   ```
+
+2. **Component Optimization**
+   ```tsx
+   // ✅ Memo for preventing unnecessary re-renders
+   const ExpensiveComponent = memo(({ data }: Props) => {
+     return <div>{data}</div>;
+   });
+   ```
+
+### Error Handling
+
+1. **Error Boundaries**
+
+   ```tsx
+   // ✅ Error boundary for catching component errors
+   class ErrorBoundary extends Component<Props, State> {
+     constructor(props: Props) {
+       super(props);
+       this.state = { hasError: false };
+     }
+
+     static getDerivedStateFromError(error: Error): State {
+       return { hasError: true };
+     }
+
+     componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+       console.error("Error caught by boundary:", error, errorInfo);
+     }
+
+     render() {
+       if (this.state.hasError) {
+         return <h1>Something went wrong.</h1>;
+       }
+       return this.props.children;
+     }
+   }
+   ```
+
+2. **Async Error Handling**
+
+   ```tsx
+   // ✅ Proper async error handling in effects
+   useEffect(() => {
+     const fetchData = async () => {
+       try {
+         const result = await api.getData();
+         setData(result);
+       } catch (error) {
+         setError(error instanceof Error ? error.message : "Unknown error");
+       }
+     };
+
+     fetchData();
+   }, []);
+   ```
+
+### TypeScript Integration
+
+1. **Component Props**
+
+   ```tsx
+   // ✅ Proper TypeScript interfaces
+   interface ButtonProps {
+     children: ReactNode;
+     onClick?: () => void;
+     variant?: "primary" | "secondary";
+     disabled?: boolean;
+   }
+
+   const Button = ({
+     children,
+     onClick,
+     variant = "primary",
+     disabled,
+   }: ButtonProps) => {
+     return (
+       <button onClick={onClick} disabled={disabled}>
+         {children}
+       </button>
+     );
+   };
+   ```
+
+2. **Event Handlers**
+
+   ```tsx
+   // ✅ Proper event typing
+   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
+     setValue(event.target.value);
+   };
+
+   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+     event.preventDefault();
+     // handle submit
+   };
+   ```
+
+## Deprecation Prevention & Code Quality
+
+### Critical Rule: No Deprecated Functions
+
+- **ALWAYS** check latest documentation before implementing any function or class
+- **NEVER** use deprecated patterns, even if they still work
+- **PRIORITIZE** modern, recommended approaches over legacy patterns
+- **AUDIT** codebase regularly for deprecated usage
+
+### FastAPI Deprecation Checks
+
+- ✅ Use `lifespan` instead of `@app.on_event("startup")` and `@app.on_event("shutdown")`
+- ✅ Use `HTTPException` from `fastapi` instead of `starlette.exceptions.HTTPException`
+- ✅ Use `Request` from `fastapi` instead of `starlette.requests.Request`
+- ✅ Use `Response` from `fastapi` instead of `starlette.responses.Response`
+- ✅ Use `Depends()` for dependency injection instead of manual dependency resolution
+- ✅ Use `BackgroundTasks` for background operations instead of manual threading
+
+### React 19 Deprecation Checks
+
+- ✅ Use functional components instead of class components
+- ✅ Use hooks instead of lifecycle methods
+- ✅ Use `createContext` with proper TypeScript typing
+- ✅ Avoid `React.FC` type annotation (use direct prop typing)
+- ✅ Use named imports instead of default React import
+- ✅ Use `useCallback` and `useMemo` for performance optimization
+
+### Python Deprecation Checks
+
+- ✅ Use `asynccontextmanager` for async context managers
+- ✅ Use `typing.Union` or `|` syntax instead of `typing.Union` (Python 3.10+)
+- ✅ Use `pathlib.Path` instead of `os.path` for file operations
+- ✅ Use `dataclasses` instead of manual `__init__` methods
+- ✅ Use `enum.Enum` instead of manual constant definitions
+
+### Regular Audit Process
+
+1. **Before Implementation**: Check latest docs for current best practices
+2. **During Development**: Use IDE warnings and linter to catch deprecated usage
+3. **Code Review**: Always verify no deprecated patterns are introduced
+4. **Periodic Scans**: Run deprecation checks on entire codebase monthly
+5. **Dependency Updates**: Check for deprecated dependencies in requirements
+
 ## Development Notes
 
 - Always check memory bank files for current context
@@ -155,3 +486,6 @@ pnpm dev
 - Follow the established patterns for consistency
 - Test thoroughly before marking tasks complete
 - Document any new patterns or decisions in .cursorrules
+- **React Compliance**: Ensure all components follow React 19 best practices
+- **Code Review**: Check for React.FC usage, unnecessary React imports, hook violations
+- **Deprecation Prevention**: Always use latest recommended patterns, never deprecated functions

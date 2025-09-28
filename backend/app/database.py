@@ -148,6 +148,29 @@ async def get_postgres_session() -> AsyncGenerator[AsyncSession, None]:
             await session.close()
 
 
+# FastAPI dependency for database session
+async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
+    """FastAPI dependency to get PostgreSQL async session."""
+    if not postgres_async_engine:
+        raise Exception("PostgreSQL async engine not initialized")
+    
+    async_session = sessionmaker(
+        postgres_async_engine,
+        class_=AsyncSession,
+        expire_on_commit=False
+    )
+    
+    async with async_session() as session:
+        try:
+            yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
+        finally:
+            await session.close()
+
+
 # Health check functions
 async def check_postgres_health() -> dict:
     """Check PostgreSQL health status."""

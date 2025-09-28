@@ -1,5 +1,6 @@
 from pydantic_settings import BaseSettings
-from typing import Optional
+from typing import Optional, List
+import json
 
 
 class Settings(BaseSettings):
@@ -29,8 +30,15 @@ class Settings(BaseSettings):
     postgres_url: Optional[str] = None
     
     
-    # CORS settings
-    allowed_origins: list[str] = ["http://localhost:3000", "http://localhost:5173"]
+    # CORS settings - for development, allow all localhost ports
+    allowed_origins: List[str] = [
+        "http://localhost:3000", 
+        "http://localhost:5173", 
+        "http://localhost:5174",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:5173", 
+        "http://127.0.0.1:5174"
+    ]
     
     @property
     def database_url(self) -> str:
