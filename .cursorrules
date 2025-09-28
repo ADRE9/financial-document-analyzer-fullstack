@@ -2,14 +2,19 @@
 
 ## Project Overview
 
-This is a full-stack financial document analyzer built with FastAPI (Python) backend and React (TypeScript) frontend. The system processes financial documents (invoices, receipts, statements, contracts) and extracts structured data using AI/ML capabilities.
+This is a comprehensive financial document analysis system that processes corporate reports, financial statements, and investment documents using AI-powered analysis agents. This is a production-grade system that requires enterprise-level thinking and implementation.
+
+## CRITICAL WARNING
+
+**Every single line of code in this repository contains bugs, inefficiencies, or poor practices.** This is not an exaggeration - scrutinize each line of code.
 
 ## Current Status
 
-- **Phase**: Database setup and core integration
-- **Branch**: `feat/db-setup`
-- **Completion**: ~30% (infrastructure complete, core features pending)
-- **Key Issue**: All endpoints return mock data, no database integration yet
+- **Phase**: FULL-TIME CHALLENGE ACTIVATED - Complete System Transformation
+- **Branch**: `feat/user-authentication` (current), `feat/db-setup` (completed)
+- **Completion**: ~15% (infrastructure complete, but ALL code contains bugs and needs fixing)
+- **Challenge Level**: Enterprise-grade production system with AI integration
+- **Key Issue**: Every line of code needs debugging and optimization
 
 ## Architecture Patterns
 
@@ -83,21 +88,104 @@ pnpm dev
 - Frontend: http://localhost:5173
 - API Docs: http://localhost:8000/docs (when debug=True)
 
+## Challenge Requirements
+
+### Primary Objectives (MANDATORY)
+
+1. **Debug & Fix All Issues**: Find and resolve every bug in the codebase
+2. **Performance Optimization**: Identify and fix all inefficient code patterns
+3. **Production Readiness**: Make the system enterprise-ready with working frontend and backend
+
+### Advanced Complexity Requirements (EXPECTED)
+
+#### **Security & Authentication**
+
+- Implement JWT-based authentication system
+- Add role-based access control (Admin, Viewer)
+- API rate limiting and request validation
+- Input sanitization and file upload security
+- Secure environment variable management
+
+#### **Database Integration**
+
+- Design and implement database schema for:
+  - User management and authentication
+  - Document storage and metadata
+  - Analysis results and history
+  - Audit logs and system monitoring
+- Database connection pooling and optimization
+- **Preferred**: MongoDB, but any database with good reasoning
+
+#### **Frontend Integration (MANDATORY)**
+
+- Build a complete web application frontend using modern framework (React, Vue.js, or Angular)
+- **Preferred (not mandatory):** TailwindCSS for styling and shadcn/ui components for enhanced UI
+- Real-time file upload with progress indicators
+- Interactive dashboards for financial analysis results
+- User authentication and session management on frontend
+- Document management interface (upload, view, delete, search)
+- Analysis history and results visualization
+- Export functionality with download capabilities
+- Error handling and user feedback systems
+
+#### **Performance & Scalability**
+
+- Implement Redis caching for frequently accessed data
+- Add background job processing with Redis or Celery or other job queue system
+- Database query optimization and indexing
+- Memory-efficient document processing
+- Async/await patterns throughout the codebase
+
+#### **Monitoring & Observability**
+
+- Add LLM Observability Tools to the codebase to monitor the LLM calls and the tools calls
+
+### Edge Cases & Advanced Scenarios (CRITICAL FOR EVALUATION)
+
+#### **Document Processing Edge Cases**
+
+- Corrupted or password-protected PDFs
+- Documents larger than 100MB
+- Non-English financial documents
+- Scanned documents with poor OCR quality
+- Documents with complex tables and charts
+
+#### **API & System Edge Cases**
+
+- Concurrent file uploads from multiple users
+- Network timeouts during long analysis processes
+- Memory exhaustion with large documents
+- Database connection failures during analysis
+- API rate limit exceeded scenarios
+- Invalid file formats and malicious uploads
+- Extremely long user queries or prompts
+
+#### **Frontend & User Experience Edge Cases**
+
+- File upload failures with proper error recovery
+- Large file uploads exceeding browser memory limits
+- Simultaneous document processing and UI responsiveness
+- Cross-origin resource sharing (CORS) issues
+
 ## Critical Next Steps
 
 ### Immediate Priorities
 
-1. **Database Integration**: Set up PostgreSQL with SQLAlchemy models
-2. **Document Processing**: Integrate OCR library (Tesseract/PaddleOCR)
-3. **Frontend Integration**: Connect React to real API endpoints
-4. **Testing**: Add comprehensive test suite
+1. **Code Analysis**: Conduct comprehensive analysis to identify ALL bugs and inefficiencies
+2. **Database Integration**: Set up MongoDB/PostgreSQL with proper schema design
+3. **CrewAI Integration**: Integrate CrewAI 0.130.0 for AI-powered document analysis
+4. **Frontend Integration**: Connect React to real API endpoints with complete UI
+5. **Security Implementation**: JWT authentication, role-based access control, API security
+6. **Testing**: Add comprehensive test suite for all components
 
 ### Technical Decisions Needed
 
-- **Database**: PostgreSQL for production, SQLite for development
-- **OCR Engine**: Tesseract vs PaddleOCR vs cloud-based solutions
-- **Document Processing**: Sync vs async processing for large files
-- **Authentication**: JWT implementation strategy
+- **Database**: MongoDB (preferred) or PostgreSQL with proper reasoning
+- **AI Engine**: CrewAI 0.130.0 for document analysis and investment recommendations
+- **Document Processing**: Async processing for large files with progress tracking
+- **Authentication**: JWT implementation with role-based access control
+- **Caching**: Redis for performance optimization
+- **Monitoring**: LLM Observability Tools for AI call monitoring
 
 ## Code Quality Standards
 
