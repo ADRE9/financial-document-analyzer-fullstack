@@ -9,7 +9,7 @@ import time
 from datetime import datetime, timezone
 
 from app.config import settings
-from app.routers import health, documents, analytics, auth, protected, auth_test, auth_oauth2
+from app.routers import health, documents, analytics, auth, protected
 from app.models.schemas import ErrorResponse
 from app.database import connect_to_mongodb, close_mongodb_connection
 
@@ -157,9 +157,7 @@ app.include_router(health.router)
 app.include_router(documents.router)
 app.include_router(analytics.router)
 app.include_router(auth.router)
-app.include_router(auth_oauth2.router)  # OAuth2 pattern following FastAPI docs
 app.include_router(protected.router)
-app.include_router(auth_test.router)
 
 
 # Root endpoint

@@ -1,11 +1,7 @@
-import { Component, ReactNode, ErrorInfo } from "react";
-import { AlertTriangle, RefreshCw } from "lucide-react";
-import { Button } from "../ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import { Component, type ReactNode, type ErrorInfo } from "react";
 
 interface Props {
   children: ReactNode;
-  fallback?: ReactNode;
 }
 
 interface State {
@@ -25,64 +21,37 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("Error caught by boundary:", error, errorInfo);
-
-    // Here you could send error to logging service
-    // logErrorToService(error, errorInfo);
   }
-
-  handleReset = () => {
-    this.setState({ hasError: false, error: undefined });
-  };
 
   render() {
     if (this.state.hasError) {
-      if (this.props.fallback) {
-        return this.props.fallback;
-      }
-
       return (
-        <div className="min-h-[400px] flex items-center justify-center p-4">
-          <Card className="w-full max-w-md">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2 text-red-600">
-                <AlertTriangle className="h-5 w-5" />
-                <span>Something went wrong</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-gray-600">
-                An unexpected error occurred. Please try refreshing the page or
-                contact support if the problem persists.
-              </p>
-
-              {process.env.NODE_ENV === "development" && this.state.error && (
-                <details className="bg-gray-50 p-3 rounded text-sm">
-                  <summary className="font-medium cursor-pointer">
-                    Error Details
-                  </summary>
-                  <pre className="mt-2 text-xs overflow-auto">
-                    {this.state.error.stack}
-                  </pre>
-                </details>
-              )}
-
-              <div className="flex space-x-2">
-                <Button
-                  onClick={this.handleReset}
-                  className="flex items-center space-x-2"
-                >
-                  <RefreshCw className="h-4 w-4" />
-                  <span>Try Again</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => window.location.reload()}
-                >
-                  Refresh Page
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-gray-900 mb-4">
+              Something went wrong
+            </h1>
+            <p className="text-gray-600 mb-4">
+              We're sorry, but something unexpected happened. Please try
+              refreshing the page.
+            </p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            >
+              Refresh Page
+            </button>
+            {import.meta.env.DEV && this.state.error && (
+              <details className="mt-4 text-left">
+                <summary className="cursor-pointer text-sm text-gray-500">
+                  Error Details
+                </summary>
+                <pre className="mt-2 text-xs text-red-600 bg-red-50 p-2 rounded">
+                  {this.state.error.stack}
+                </pre>
+              </details>
+            )}
+          </div>
         </div>
       );
     }

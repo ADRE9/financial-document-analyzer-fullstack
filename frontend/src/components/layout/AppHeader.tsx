@@ -1,6 +1,7 @@
 import { LogOut, User } from "lucide-react";
 import { Button } from "../ui/button";
 import { getRoleDisplayName, getRoleBadgeColor } from "../../utils/roleUtils";
+import { UserRole } from "../../types/api";
 
 interface AppHeaderProps {
   title: string;
@@ -9,7 +10,7 @@ interface AppHeaderProps {
     first_name?: string;
     last_name?: string;
     username?: string;
-    role?: string;
+    role?: UserRole;
   } | null;
   onLogout: () => void;
 }
