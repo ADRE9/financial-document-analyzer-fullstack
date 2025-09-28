@@ -14,3 +14,8 @@ beanie>=1.27.0,<2.0.0
 # Authentication dependencies
 python-jose[cryptography]>=3.3.0
 passlib[bcrypt]>=1.7.4
+
+# File validation and security dependencies
+python-magic>=0.4.27
+PyPDF2>=3.0.1
+aiofiles>=24.1.0

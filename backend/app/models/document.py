@@ -62,6 +62,10 @@ class FinancialDocument(BaseDocument):
     analysis_results: Optional[Dict[str, Any]] = Field(default_factory=dict)
     confidence_score: Optional[float] = Field(None, ge=0.0, le=1.0)
     
+    # Password protection
+    is_password_protected: bool = Field(default=False)
+    password_required: bool = Field(default=False)
+    
     # Metadata
     tags: List[str] = Field(default_factory=list)
     is_archived: bool = Field(default=False)

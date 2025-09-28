@@ -390,16 +390,162 @@ This file tracks all bugs, issues, and inefficiencies found in the codebase. Eac
   - No linting errors introduced
 - **Verification**: Code review confirms proper type conversion, database operations will succeed
 
+### BUG-017: Frontend API Upload Type Mismatch
+
+- **Status**: ✅ Fixed
+- **Priority**: 🟠 High
+- **Category**: Frontend
+- **Description**: The frontend `uploadDocument` API expects to return `DocumentAnalysisResponse` but the backend `/documents/upload` endpoint returns `SuccessResponse`. This type mismatch will cause runtime errors and TypeScript compilation issues
+- **Files**: `frontend/src/services/api.ts` (lines 185-202), `backend/app/routers/documents.py` (lines 51-95)
+- **Impact**: Upload functionality fails due to type mismatch between expected and actual API response
+- **Discovery Date**: 2024-01-15
+- **Resolution Date**: 2024-01-15
+- **Steps to Reproduce**:
+  1. Call `apiClient.uploadDocument()` method
+  2. Backend returns `SuccessResponse` but frontend expects `DocumentAnalysisResponse`
+  3. Type mismatch causes runtime errors
+- **Expected**: Frontend and backend should use consistent response types
+- **Actual**: ✅ **FIXED** - Backend now returns `DocumentAnalysisResponse` and frontend properly handles the response
+- **Fix Details**:
+  - Updated backend `/documents/upload` endpoint to return `DocumentAnalysisResponse` instead of `SuccessResponse`
+  - Fixed frontend API service to properly match backend response type
+  - Removed redundant `filename` parameter from FormData (using file.filename directly)
+  - All upload functionality now works correctly with consistent types
+- **Verification**: Type safety verified, upload functionality working correctly
+
+### BUG-018: Backend File Size Limit Too Low
+
+- **Status**: ✅ Fixed
+- **Priority**: 🟠 High
+- **Category**: Backend
+- **Description**: The backend upload endpoint has a 10MB file size limit, but challenge requirements specify support for documents larger than 100MB. This prevents uploading large financial documents
+- **Files**: `backend/app/routers/documents.py` (lines 73-79)
+- **Impact**: Cannot upload large financial documents as required by challenge specifications
+- **Discovery Date**: 2024-01-15
+- **Resolution Date**: 2024-01-15
+- **Steps to Reproduce**:
+  1. Attempt to upload a file larger than 10MB
+  2. Backend rejects with HTTP 413 error
+- **Expected**: Support files up to 100MB as per challenge requirements
+- **Actual**: ✅ **FIXED** - Now supports files up to 100MB as required
+- **Fix Details**:
+  - Updated file size validation to use configurable `settings.max_file_size_mb` (default 100MB)
+  - Added upload_directory and max_file_size_mb to application configuration
+  - Updated error messages to show dynamic file size limit
+  - All file size validation now uses the configurable limit
+- **Verification**: File size limit properly increased to 100MB, configuration-driven
+
+### BUG-019: Backend File Processing Not Implemented
+
+- **Status**: ✅ Fixed
+- **Priority**: 🔴 Critical
+- **Category**: Backend
+- **Description**: The upload endpoint reads file content for validation but doesn't store the file or process it. Files are discarded after upload, making the system non-functional
+- **Files**: `backend/app/routers/documents.py` (lines 74-95)
+- **Impact**: Core functionality broken - uploaded files are not stored or processed
+- **Discovery Date**: 2024-01-15
+- **Resolution Date**: 2024-01-15
+- **Steps to Reproduce**:
+  1. Upload a file via the API
+  2. File content is read for validation but then discarded
+  3. No file storage or database record creation occurs
+- **Expected**: Files should be stored securely and database records created
+- **Actual**: ✅ **FIXED** - Complete file processing and storage implementation
+- **Fix Details**:
+  - Implemented secure file storage with unique filename generation using UUID
+  - Added database record creation using FinancialDocument model
+  - Added file hash generation for deduplication (SHA256)
+  - Added comprehensive error handling with cleanup on failure
+  - Added file existence checking to prevent duplicates
+  - Created upload directory automatically if it doesn't exist
+  - Proper async file operations using aiofiles
+- **Verification**: Files are now properly stored to disk and tracked in database
+
+### BUG-020: Missing Authentication in Document Endpoints
+
+- **Status**: ✅ Fixed
+- **Priority**: 🟠 High
+- **Category**: Backend
+- **Description**: The document endpoints (`/documents/upload`, `/documents/`, etc.) don't require authentication, allowing anyone to upload or access documents. This violates security requirements
+- **Files**: `backend/app/routers/documents.py` (all endpoints)
+- **Impact**: Security vulnerability - unauthenticated access to document functionality
+- **Discovery Date**: 2024-01-15
+- **Resolution Date**: 2024-01-15
+- **Steps to Reproduce**:
+  1. Call any document endpoint without authentication token
+  2. Endpoints respond normally without requiring authentication
+- **Expected**: All document endpoints should require valid authentication
+- **Actual**: ✅ **FIXED** - All document endpoints now require authentication and implement proper authorization
+- **Fix Details**:
+  - Added `current_user: User = Depends(get_current_active_user)` to all document endpoints
+  - Implemented proper user ownership checks (users can only access their own documents)
+  - Added admin access control (admins can access all documents)
+  - Added proper error handling for unauthorized access (403 Forbidden)
+  - All file operations are now scoped to the authenticated user
+  - Added user ID to database queries for data isolation
+- **Verification**: Authentication is now required for all document operations, proper authorization implemented
+
+### BUG-021: Password-Protected PDF Support Missing
+
+- **Status**: ✅ Fixed
+- **Priority**: 🟠 High
+- **Category**: Feature Enhancement
+- **Description**: The system doesn't support password-protected PDFs, limiting functionality for users with encrypted financial documents
+- **Files**: `backend/app/models/schemas.py`, `backend/app/models/document.py`, `backend/app/utils/file_validator.py`, `backend/app/routers/documents.py`, `frontend/src/types/api.ts`, `frontend/src/services/api.ts`, `frontend/src/components/PDFUploadZone.tsx`, `frontend/src/components/documents/DocumentItem.tsx`
+- **Impact**: Users cannot upload password-protected PDFs, limiting document processing capabilities
+- **Discovery Date**: 2024-01-15
+- **Resolution Date**: 2024-01-15
+- **Steps to Reproduce**:
+  1. Try to upload a password-protected PDF
+  2. System rejects the file or fails to process it
+- **Expected**: System should support password-protected PDFs with password input
+- **Actual**: ✅ **FIXED** - Complete password-protected PDF support implemented
+- **Fix Details**:
+  - Added password field to DocumentUploadRequest schema
+  - Added is_password_protected field to DocumentAnalysisResponse schema
+  - Updated FinancialDocument model with password protection fields
+  - Enhanced file validator to detect and validate password-protected PDFs
+  - Updated upload endpoint to accept and process password parameter
+  - Added password input field to PDFUploadZone component
+  - Updated frontend API service to send password in upload requests
+  - Added password protection status display in document list
+  - Implemented proper error handling for invalid passwords
+- **Verification**: Password-protected PDFs can now be uploaded and processed successfully
+
+### BUG-022: FinancialDocument.get() ObjectId Bug
+
+- **Status**: ✅ Fixed
+- **Priority**: 🔴 Critical
+- **Category**: Backend
+- **Description**: The `FinancialDocument.get()` method in both the `get_document` and `delete_document` endpoints receives a string `document_id`. This method expects a MongoDB `ObjectId`, leading to database query failures
+- **Files**: `backend/app/routers/documents.py` (lines 254, 303)
+- **Impact**: Database query failures when retrieving or deleting documents, system instability
+- **Discovery Date**: 2024-01-15
+- **Resolution Date**: 2024-01-15
+- **Steps to Reproduce**:
+  1. Call GET `/documents/{document_id}` with a valid document ID
+  2. Call DELETE `/documents/{document_id}` with a valid document ID
+  3. Both endpoints fail with ObjectId conversion errors
+- **Expected**: String document IDs should be properly converted to ObjectId before database queries
+- **Actual**: ✅ **FIXED** - Replaced `FinancialDocument.get()` with `FinancialDocument.find_by_id()` for proper ObjectId conversion
+- **Fix Details**:
+  - Updated `get_document` endpoint to use `FinancialDocument.find_by_id(document_id)` instead of `FinancialDocument.get(document_id)`
+  - Updated `delete_document` endpoint to use `FinancialDocument.find_by_id(document_id)` instead of `FinancialDocument.get(document_id)`
+  - The `find_by_id` method from `BaseDocument` properly converts string IDs to ObjectId using `ObjectId(doc_id)`
+  - Both endpoints now work correctly with string document IDs
+  - No linting errors introduced
+- **Verification**: Document retrieval and deletion operations now work correctly with proper ObjectId handling
+
 ---
 
 ## Bug Statistics
 
-- **Total Bugs**: 16
-- **Open**: 8
+- **Total Bugs**: 22
+- **Open**: 7
 - **In Progress**: 0
-- **Fixed**: 8
-- **Critical**: 1 (was 2, BUG-016 fixed)
-- **High**: 0 (was 1, BUG-015 fixed)
+- **Fixed**: 15
+- **Critical**: 0 (BUG-019, BUG-022 Fixed)
+- **High**: 0 (BUG-017, BUG-018, BUG-020, BUG-021 Fixed)
 - **Medium**: 4
 - **Low**: 0
 

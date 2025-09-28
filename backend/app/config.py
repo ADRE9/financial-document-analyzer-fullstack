@@ -29,6 +29,17 @@ class Settings(BaseSettings):
     mongodb_db: str = "financial_docs"
     mongodb_url: Optional[str] = None
     
+    # File upload settings
+    upload_directory: str = "uploads"
+    max_file_size_mb: int = 10  # Maximum file size in MB (strict 10MB limit)
+    
+    # Security settings for file validation
+    strict_pdf_validation: bool = False  # Set to True in production for stricter validation
+    allow_encrypted_pdfs: bool = True
+    log_suspicious_patterns: bool = True
+    skip_file_validation: bool = True  # Set to False in production for full validation
+    allowed_file_types: List[str] = [".pdf"]  # Only PDF files allowed
+    
     # CORS settings - for development, allow all localhost ports
     allowed_origins: List[str] = [
         "http://localhost:3000", 

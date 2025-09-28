@@ -13,6 +13,7 @@ import Register from "./pages/Register";
 import Home from "./pages/Home";
 import SmartHome from "./pages/SmartHome";
 import AdminHome from "./pages/AdminHome";
+import AdminDocuments from "./pages/AdminDocuments";
 import ViewerHome from "./pages/ViewerHome";
 import Unauthorized from "./pages/Unauthorized";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -77,6 +78,14 @@ const router = createBrowserRouter([
         element: (
           <AdminRoute>
             <AdminHome />
+          </AdminRoute>
+        ),
+      },
+      {
+        path: "admin/documents",
+        element: (
+          <AdminRoute>
+            <AdminDocuments />
           </AdminRoute>
         ),
       },

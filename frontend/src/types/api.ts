@@ -35,6 +35,7 @@ export interface DocumentUploadRequest {
   filename: string;
   document_type: DocumentType;
   description?: string;
+  password?: string;
 }
 
 export interface DocumentAnalysisResponse {
@@ -45,6 +46,7 @@ export interface DocumentAnalysisResponse {
   confidence_score: number;
   processed_at: string;
   status: string;
+  is_password_protected: boolean;
 }
 
 export interface ErrorResponse {
