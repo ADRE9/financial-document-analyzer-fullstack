@@ -71,10 +71,10 @@
 
 ### Authentication & Security (Medium Priority)
 
-- [ ] Implement JWT-based authentication
-- [ ] Add user registration and login
-- [ ] Create role-based access control
-- [ ] Implement session management
+- [x] Implement JWT-based authentication
+- [x] Add user registration and login
+- [x] Create role-based access control (Admin and Viewer roles)
+- [x] Implement session management
 - [ ] Add API rate limiting
 - [ ] Implement file upload security measures
 - [ ] Add audit logging for sensitive operations
@@ -126,6 +126,13 @@
 ### Recently Fixed Issues
 
 1. **Documentation Endpoints**: Fixed 404 errors for `/docs` and `/redoc` by enabling debug mode in configuration
+2. **Role-Based Authentication**: Implemented complete RBAC system with Admin and Viewer roles, including:
+   - UserRole enum with Admin and Viewer roles
+   - User model updated with role field and helper methods
+   - JWT tokens enhanced with role information
+   - Authentication middleware with role-based dependencies
+   - Protected endpoints demonstrating role access control
+   - Test script for RBAC verification
 
 ## Next Milestones 🎯
 

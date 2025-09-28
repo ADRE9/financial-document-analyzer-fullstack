@@ -11,8 +11,13 @@ import { AuthProvider } from "./contexts/AuthContext";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Home from "./pages/Home";
+import SmartHome from "./pages/SmartHome";
+import AdminHome from "./pages/AdminHome";
+import ViewerHome from "./pages/ViewerHome";
+import Unauthorized from "./pages/Unauthorized";
 import ProtectedRoute from "./components/ProtectedRoute";
 import PublicRoute from "./components/PublicRoute";
+import { AdminRoute, ViewerRoute } from "./components/RoleBasedRoute";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -61,6 +66,39 @@ const router = createBrowserRouter([
       },
       {
         path: "home",
+        element: (
+          <ProtectedRoute>
+            <SmartHome />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "admin",
+        element: (
+          <AdminRoute>
+            <AdminHome />
+          </AdminRoute>
+        ),
+      },
+      {
+        path: "viewer",
+        element: (
+          <ViewerRoute>
+            <ViewerHome />
+          </ViewerRoute>
+        ),
+      },
+      {
+        path: "unauthorized",
+        element: (
+          <ProtectedRoute>
+            <Unauthorized />
+          </ProtectedRoute>
+        ),
+      },
+      // Legacy home route for backward compatibility
+      {
+        path: "legacy-home",
         element: (
           <ProtectedRoute>
             <Home />

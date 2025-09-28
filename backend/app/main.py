@@ -9,9 +9,9 @@ import time
 from datetime import datetime, timezone
 
 from app.config import settings
-from app.routers import health, documents, analytics, auth, protected, auth_test
+from app.routers import health, documents, analytics, auth, protected, auth_test, auth_oauth2
 from app.models.schemas import ErrorResponse
-from app.database import init_databases, close_databases
+from app.database import connect_to_mongodb, close_mongodb_connection
 
 # Configure logging
 logging.basicConfig(
@@ -30,12 +30,12 @@ async def lifespan(app: FastAPI):
     logger.info(f"Debug mode: {settings.debug}")
     logger.info(f"Server will run on {settings.host}:{settings.port}")
     
-    # Initialize database connections
+    # Initialize MongoDB connection
     try:
-        await init_databases()
-        logger.info("Database connections initialized successfully")
+        await connect_to_mongodb()
+        logger.info("MongoDB connection initialized successfully")
     except Exception as e:
-        logger.error(f"Failed to initialize database connections: {e}")
+        logger.error(f"Failed to initialize MongoDB connection: {e}")
         # Don't raise here to allow the app to start even if DB is unavailable
         # This is useful for development and testing
     
@@ -44,12 +44,12 @@ async def lifespan(app: FastAPI):
     # Shutdown
     logger.info("Shutting down Financial Document Analyzer API")
     
-    # Close database connections
+    # Close MongoDB connection
     try:
-        await close_databases()
-        logger.info("Database connections closed successfully")
+        await close_mongodb_connection()
+        logger.info("MongoDB connection closed successfully")
     except Exception as e:
-        logger.error(f"Error closing database connections: {e}")
+        logger.error(f"Error closing MongoDB connection: {e}")
 
 
 # Create FastAPI application
@@ -157,6 +157,7 @@ app.include_router(health.router)
 app.include_router(documents.router)
 app.include_router(analytics.router)
 app.include_router(auth.router)
+app.include_router(auth_oauth2.router)  # OAuth2 pattern following FastAPI docs
 app.include_router(protected.router)
 app.include_router(auth_test.router)
 

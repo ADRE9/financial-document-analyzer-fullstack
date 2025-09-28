@@ -10,6 +10,7 @@ import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { useRegister } from "../hooks/useAuth";
 import { useAuth } from "../hooks/useAuthContext";
+import { UserRole } from "../types/api";
 
 // Validation schema
 const registerSchema = z
@@ -45,6 +46,7 @@ const registerSchema = z
       .string()
       .min(1, "Last name is required")
       .max(50, "Last name must be less than 50 characters"),
+    role: z.nativeEnum(UserRole).optional(),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match",
@@ -87,7 +89,18 @@ const Register = () => {
     try {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { confirmPassword: _, ...registerData } = data;
-      await registerMutation.mutateAsync(registerData);
+
+      // Convert form data to API format
+      const apiData = {
+        username: registerData.username,
+        email: registerData.email,
+        password: registerData.password,
+        first_name: registerData.firstName,
+        last_name: registerData.lastName,
+        ...(registerData.role && { role: registerData.role }),
+      };
+
+      await registerMutation.mutateAsync(apiData);
       // Success handling is now done in the mutation hook with optimistic updates
     } catch (error) {
       // Error handling is now done in the mutation hook
@@ -314,6 +327,40 @@ const Register = () => {
                   {errors.confirmPassword.message}
                 </p>
               )}
+            </div>
+
+            <div>
+              <Label
+                htmlFor="role"
+                className="block text-sm font-medium text-gray-700"
+              >
+                Account Type
+              </Label>
+              <select
+                id="role"
+                className={`mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${
+                  errors.role
+                    ? "border-red-300 focus:border-red-500 focus:ring-red-500"
+                    : ""
+                }`}
+                {...register("role")}
+              >
+                <option value="">Select account type (optional)</option>
+                <option value={UserRole.VIEWER}>
+                  Viewer - View documents and analysis
+                </option>
+                <option value={UserRole.ADMIN}>
+                  Administrator - Full system access
+                </option>
+              </select>
+              {errors.role && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.role.message}
+                </p>
+              )}
+              <p className="mt-1 text-xs text-gray-500">
+                If not selected, your account will default to Viewer access.
+              </p>
             </div>
           </div>
 

@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPBearer
 
 from app.models.schemas import SuccessResponse, UserResponse
-from app.middleware.auth import get_current_active_user
+from app.middleware.auth import get_current_active_user, get_current_admin_user, get_current_viewer_user, require_admin, require_viewer
 from app.models.user import User
 from app.utils.jwt import verify_token
 
@@ -63,42 +63,87 @@ async def get_user_info(
     """
     logger.info(f"User info requested by: {current_user.username}")
     
-    return UserResponse(
-        id=current_user.id,
-        username=current_user.username,
-        email=current_user.email,
-        first_name=current_user.first_name,
-        last_name=current_user.last_name,
-        is_active=current_user.is_active,
-        is_verified=current_user.is_verified,
-        created_at=current_user.created_at,
-        updated_at=current_user.updated_at
-    )
+    return UserResponse(**current_user.to_response_dict())
 
 
 @router.get("/admin-only", response_model=SuccessResponse)
 async def admin_only_route(
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_admin_user)
 ):
     """
-    An admin-only protected route (for future role-based access control).
+    An admin-only protected route requiring Admin role.
     
     Args:
-        current_user: Current authenticated user
+        current_user: Current authenticated admin user
         
     Returns:
         SuccessResponse: Admin access confirmation
     """
-    logger.info(f"Admin route accessed by user: {current_user.username}")
+    logger.info(f"Admin route accessed by user: {current_user.username} (Role: {current_user.role})")
     
-    # For now, all authenticated users can access this
-    # In the future, this can be extended with proper role checking
     return SuccessResponse(
         message=f"Welcome to the admin area, {current_user.username}!",
         data={
-            "user_id": current_user.id,
+            "user_id": str(current_user.id),
             "username": current_user.username,
+            "role": current_user.role.value,
             "access_level": "admin",
+            "access_time": datetime.utcnow().isoformat()
+        },
+        timestamp=datetime.utcnow()
+    )
+
+
+@router.get("/viewer-access", response_model=SuccessResponse)
+async def viewer_access_route(
+    current_user: User = Depends(get_current_viewer_user)
+):
+    """
+    A route accessible by viewers and admins.
+    
+    Args:
+        current_user: Current authenticated user with viewer role or higher
+        
+    Returns:
+        SuccessResponse: Viewer access confirmation
+    """
+    logger.info(f"Viewer route accessed by user: {current_user.username} (Role: {current_user.role})")
+    
+    return SuccessResponse(
+        message=f"Hello {current_user.username}! You have viewer access or higher.",
+        data={
+            "user_id": str(current_user.id),
+            "username": current_user.username,
+            "role": current_user.role.value,
+            "access_level": "viewer",
+            "access_time": datetime.utcnow().isoformat()
+        },
+        timestamp=datetime.utcnow()
+    )
+
+
+@router.get("/admin-with-decorator", response_model=SuccessResponse)
+async def admin_with_decorator_route(
+    current_user: User = Depends(require_admin())
+):
+    """
+    Admin route using decorator pattern for role checking.
+    
+    Args:
+        current_user: Current authenticated admin user
+        
+    Returns:
+        SuccessResponse: Admin access confirmation
+    """
+    logger.info(f"Admin decorator route accessed by user: {current_user.username} (Role: {current_user.role})")
+    
+    return SuccessResponse(
+        message=f"Admin decorator route accessed by {current_user.username}!",
+        data={
+            "user_id": str(current_user.id),
+            "username": current_user.username,
+            "role": current_user.role.value,
+            "decorator_type": "require_admin",
             "access_time": datetime.utcnow().isoformat()
         },
         timestamp=datetime.utcnow()

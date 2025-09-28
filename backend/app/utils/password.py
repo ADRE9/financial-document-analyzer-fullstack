@@ -10,8 +10,8 @@ from passlib.context import CryptContext
 # Configure logging
 logger = logging.getLogger(__name__)
 
-# Create password context with argon2 (more compatible)
-pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
+# Create password context with bcrypt (recommended by FastAPI)
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -43,9 +43,11 @@ def get_password_hash(password: str) -> str:
         str: The hashed password
     """
     try:
-        # Truncate password to 72 bytes for bcrypt compatibility
-        if len(password.encode('utf-8')) > 72:
-            password = password[:72]
+        # bcrypt has a 72-byte limit, so we need to truncate if necessary
+        password_bytes = password.encode('utf-8')
+        if len(password_bytes) > 72:
+            # Truncate to 72 bytes and decode back to string
+            password = password_bytes[:72].decode('utf-8', errors='ignore')
         return pwd_context.hash(password)
     except Exception as e:
         logger.error(f"Password hashing failed: {e}")

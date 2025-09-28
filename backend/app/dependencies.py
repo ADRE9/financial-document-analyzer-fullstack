@@ -1,5 +1,5 @@
 from fastapi import HTTPException, status, Depends
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials, OAuth2PasswordBearer
 from typing import Optional
 import logging
 
@@ -7,8 +7,9 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Security scheme
+# Security schemes
 security = HTTPBearer()
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
 
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> Optional[str]:
