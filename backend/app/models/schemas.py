@@ -41,6 +41,7 @@ class DocumentUploadRequest(BaseModel):
     filename: str = Field(..., description="Name of the uploaded file")
     document_type: DocumentType = Field(..., description="Type of the document")
     description: Optional[str] = Field(None, description="Optional description of the document")
+    password: Optional[str] = Field(None, description="Password for password-protected PDFs")
 
 
 class DocumentAnalysisResponse(BaseModel):
@@ -54,6 +55,7 @@ class DocumentAnalysisResponse(BaseModel):
     confidence_score: float = Field(..., ge=0.0, le=1.0, description="Confidence score between 0 and 1")
     processed_at: datetime
     status: str = "completed"
+    is_password_protected: bool = Field(default=False, description="Whether the PDF is password protected")
 
 
 class ErrorResponse(BaseModel):

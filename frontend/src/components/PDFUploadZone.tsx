@@ -1,11 +1,13 @@
 import { useState, useCallback, useMemo } from "react";
-import { FileText, AlertTriangle, CheckCircle, X } from "lucide-react";
+import { FileText, AlertTriangle, CheckCircle, X, Lock } from "lucide-react";
 import { toast } from "sonner";
 
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Progress } from "./ui/progress";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
 import { useUploadDocument } from "../hooks/useDocuments";
 import { DocumentType } from "../types/api";
 import { FileDropZone } from "./upload/FileDropZone";
@@ -27,6 +29,7 @@ export const PDFUploadZone = ({
 }: PDFUploadZoneProps) => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [password, setPassword] = useState("");
 
   const uploadMutation = useUploadDocument();
   const { validateFile } = useFileValidation(maxSizeBytes);
@@ -60,6 +63,7 @@ export const PDFUploadZone = ({
   const resetForm = useCallback(() => {
     setSelectedFile(null);
     setUploadProgress(0);
+    setPassword("");
   }, []);
 
   const handleUpload = useCallback(async () => {
@@ -88,6 +92,7 @@ export const PDFUploadZone = ({
           filename: selectedFile.name,
           document_type: DocumentType.OTHER,
           description: undefined,
+          password: password || undefined,
         },
       });
 
@@ -125,7 +130,14 @@ export const PDFUploadZone = ({
       toast.error(errorMessage);
       onUploadError?.(errorMessage);
     }
-  }, [selectedFile, uploadMutation, onUploadSuccess, onUploadError, resetForm]);
+  }, [
+    selectedFile,
+    password,
+    uploadMutation,
+    onUploadSuccess,
+    onUploadError,
+    resetForm,
+  ]);
 
   const getStatusIcon = useMemo(() => {
     if (uploadMutation.isPending) {
@@ -202,6 +214,28 @@ export const PDFUploadZone = ({
               </div>
             )}
 
+            {/* Password Input */}
+            <div className="space-y-2">
+              <Label htmlFor="pdf-password" className="text-sm font-medium">
+                PDF Password (if protected)
+              </Label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  id="pdf-password"
+                  type="password"
+                  placeholder="Enter PDF password if the file is password-protected"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={uploadMutation.isPending}
+                  className="pl-10"
+                />
+              </div>
+              <p className="text-xs text-gray-500">
+                Only required if your PDF is password-protected
+              </p>
+            </div>
+
             {/* Upload Button */}
             <div className="flex justify-end space-x-2">
               <Button
@@ -233,10 +267,15 @@ export const PDFUploadZone = ({
         <div className="text-xs text-gray-500 space-y-1">
           <div className="flex flex-wrap gap-2">
             <Badge variant="secondary">PDF Only</Badge>
+            <Badge variant="outline">Password Protected Supported</Badge>
           </div>
           <p>Maximum file size: {Math.round(maxSizeBytes / (1024 * 1024))}MB</p>
           <p className="text-red-600">
             ⚠️ Only PDF files are accepted for security reasons
+          </p>
+          <p className="text-blue-600">
+            🔒 Password-protected PDFs are supported - enter password when
+            uploading
           </p>
         </div>
       </CardContent>

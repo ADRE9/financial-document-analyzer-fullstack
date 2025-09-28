@@ -67,7 +67,8 @@ async def list_documents(
                     analysis_results=doc.analysis_results or {},
                     confidence_score=doc.confidence_score or 0.0,
                     processed_at=doc.processing_completed_at.isoformat() if doc.processing_completed_at else doc.created_at.isoformat(),
-                    status=doc.status.value
+                    status=doc.status.value,
+                    is_password_protected=doc.is_password_protected
                 )
             )
         
@@ -87,6 +88,7 @@ async def upload_document(
     file: UploadFile = File(...),
     document_type: DocumentType = DocumentType.OTHER,
     description: str = None,
+    password: str = None,
     current_user: User = Depends(get_current_active_user),
     logger=Depends(get_logger)
 ):
@@ -95,10 +97,11 @@ async def upload_document(
     
     Security Features:
     - Only PDF files allowed
-    - 10MB size limit
+    - 100MB size limit
     - Malicious content detection
     - File signature validation
     - PDF structure validation
+    - Password-protected PDF support
     """
     logger.info(f"Document upload requested: {file.filename} by user {current_user.id}")
     
@@ -118,13 +121,15 @@ async def upload_document(
                     detail=f"File too large (max {settings.max_file_size_mb}MB)"
                 )
             file_hash = hashlib.sha256(file_content).hexdigest()
+            is_password_protected = False  # Skip password check in dev mode
         else:
             # Production mode - full validation
-            is_valid, file_hash = comprehensive_file_validation(
+            is_valid, file_hash, is_password_protected = comprehensive_file_validation(
                 file_content=file_content,
                 filename=file.filename,
                 max_size_bytes=max_file_size,
-                strict_validation=settings.strict_pdf_validation
+                strict_validation=settings.strict_pdf_validation,
+                password=password
             )
             
             if not is_valid:
@@ -192,7 +197,9 @@ async def upload_document(
             file_size=len(file_content),
             file_hash=file_hash,
             mime_type=file.content_type or "application/pdf",
-            status=DocumentStatus.UPLOADED
+            status=DocumentStatus.UPLOADED,
+            is_password_protected=is_password_protected,
+            password_required=is_password_protected
         )
         
         # Save to database
@@ -208,7 +215,8 @@ async def upload_document(
             analysis_results={"status": "uploaded", "message": "Document uploaded successfully. Analysis will begin shortly."},
             confidence_score=0.0,
             processed_at=document.created_at.isoformat(),
-            status=document.status.value
+            status=document.status.value,
+            is_password_protected=document.is_password_protected
         )
         
     except HTTPException:
@@ -265,7 +273,8 @@ async def get_document(
             analysis_results=document.analysis_results or {},
             confidence_score=document.confidence_score or 0.0,
             processed_at=document.processing_completed_at.isoformat() if document.processing_completed_at else document.created_at.isoformat(),
-            status=document.status.value
+            status=document.status.value,
+            is_password_protected=document.is_password_protected
         )
         
     except HTTPException:

@@ -195,6 +195,9 @@ class ApiClient {
     if (uploadData.description) {
       formData.append("description", uploadData.description);
     }
+    if (uploadData.password) {
+      formData.append("password", uploadData.password);
+    }
 
     return this.request<DocumentAnalysisResponse>("/documents/upload", {
       method: "POST",

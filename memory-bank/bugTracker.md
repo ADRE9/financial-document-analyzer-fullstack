@@ -485,16 +485,43 @@ This file tracks all bugs, issues, and inefficiencies found in the codebase. Eac
   - Added user ID to database queries for data isolation
 - **Verification**: Authentication is now required for all document operations, proper authorization implemented
 
+### BUG-021: Password-Protected PDF Support Missing
+
+- **Status**: ✅ Fixed
+- **Priority**: 🟠 High
+- **Category**: Feature Enhancement
+- **Description**: The system doesn't support password-protected PDFs, limiting functionality for users with encrypted financial documents
+- **Files**: `backend/app/models/schemas.py`, `backend/app/models/document.py`, `backend/app/utils/file_validator.py`, `backend/app/routers/documents.py`, `frontend/src/types/api.ts`, `frontend/src/services/api.ts`, `frontend/src/components/PDFUploadZone.tsx`, `frontend/src/components/documents/DocumentItem.tsx`
+- **Impact**: Users cannot upload password-protected PDFs, limiting document processing capabilities
+- **Discovery Date**: 2024-01-15
+- **Resolution Date**: 2024-01-15
+- **Steps to Reproduce**:
+  1. Try to upload a password-protected PDF
+  2. System rejects the file or fails to process it
+- **Expected**: System should support password-protected PDFs with password input
+- **Actual**: ✅ **FIXED** - Complete password-protected PDF support implemented
+- **Fix Details**:
+  - Added password field to DocumentUploadRequest schema
+  - Added is_password_protected field to DocumentAnalysisResponse schema
+  - Updated FinancialDocument model with password protection fields
+  - Enhanced file validator to detect and validate password-protected PDFs
+  - Updated upload endpoint to accept and process password parameter
+  - Added password input field to PDFUploadZone component
+  - Updated frontend API service to send password in upload requests
+  - Added password protection status display in document list
+  - Implemented proper error handling for invalid passwords
+- **Verification**: Password-protected PDFs can now be uploaded and processed successfully
+
 ---
 
 ## Bug Statistics
 
-- **Total Bugs**: 20
+- **Total Bugs**: 21
 - **Open**: 8
 - **In Progress**: 0
-- **Fixed**: 12
+- **Fixed**: 13
 - **Critical**: 0 (BUG-019 Fixed)
-- **High**: 0 (BUG-017, BUG-018, BUG-020 Fixed)
+- **High**: 0 (BUG-017, BUG-018, BUG-020, BUG-021 Fixed)
 - **Medium**: 4
 - **Low**: 0
 

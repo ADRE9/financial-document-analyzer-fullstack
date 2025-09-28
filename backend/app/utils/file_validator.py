@@ -121,15 +121,16 @@ def validate_mime_type(file_content: bytes) -> bool:
         raise FileValidationError("Failed to validate file type")
 
 
-def validate_pdf_structure(file_content: bytes) -> bool:
+def validate_pdf_structure(file_content: bytes, password: Optional[str] = None) -> Tuple[bool, bool]:
     """
     Validate PDF file structure and detect potential malicious content.
     
     Args:
         file_content: Raw file content bytes
+        password: Optional password for encrypted PDFs
         
     Returns:
-        True if PDF structure is valid and safe
+        Tuple of (is_valid, is_password_protected)
         
     Raises:
         MaliciousFileError: If malicious content is detected
@@ -142,10 +143,24 @@ def validate_pdf_structure(file_content: bytes) -> bool:
         # Try to read PDF with PyPDF2
         pdf_reader = PyPDF2.PdfReader(pdf_stream)
         
-        # Check if PDF is encrypted (log but allow)
-        if pdf_reader.is_encrypted:
-            logger.info("Encrypted PDF detected - this may require manual processing")
-            # Allow encrypted PDFs but log for admin attention
+        # Check if PDF is encrypted
+        is_password_protected = pdf_reader.is_encrypted
+        
+        if is_password_protected:
+            logger.info("Password-protected PDF detected")
+            
+            # If password provided, try to decrypt
+            if password:
+                try:
+                    if pdf_reader.decrypt(password):
+                        logger.info("PDF successfully decrypted with provided password")
+                    else:
+                        raise FileValidationError("Invalid password for encrypted PDF")
+                except Exception as e:
+                    raise FileValidationError(f"Failed to decrypt PDF: {e}")
+            else:
+                # Password required but not provided
+                raise FileValidationError("Password is required for this encrypted PDF")
         
         # Validate number of pages (prevent excessive resource usage)
         num_pages = len(pdf_reader.pages)
@@ -166,8 +181,8 @@ def validate_pdf_structure(file_content: bytes) -> bool:
                 # If we can't read object count, proceed with caution
                 logger.warning("Could not validate PDF object count")
         
-        logger.info(f"PDF validation successful: {num_pages} pages")
-        return True
+        logger.info(f"PDF validation successful: {num_pages} pages, password_protected: {is_password_protected}")
+        return True, is_password_protected
         
     except PyPDF2.errors.PdfReadError as e:
         raise FileValidationError(f"Invalid PDF structure: {e}")
@@ -274,8 +289,9 @@ def comprehensive_file_validation(
     file_content: bytes, 
     filename: str, 
     max_size_bytes: int = 10 * 1024 * 1024,
-    strict_validation: bool = False
-) -> Tuple[bool, str]:
+    strict_validation: bool = False,
+    password: Optional[str] = None
+) -> Tuple[bool, str, bool]:
     """
     Perform comprehensive file validation including security checks.
     
@@ -283,9 +299,11 @@ def comprehensive_file_validation(
         file_content: Raw file content bytes
         filename: Original filename
         max_size_bytes: Maximum allowed file size in bytes
+        strict_validation: Whether to perform strict validation
+        password: Optional password for encrypted PDFs
         
     Returns:
-        Tuple of (is_valid, file_hash)
+        Tuple of (is_valid, file_hash, is_password_protected)
         
     Raises:
         FileValidationError: If file validation fails
@@ -311,13 +329,13 @@ def comprehensive_file_validation(
             validate_mime_type(file_content)
         
         # 5. Validate PDF structure and detect malicious content
-        validate_pdf_structure(file_content)
+        is_valid, is_password_protected = validate_pdf_structure(file_content, password)
         
         # 6. Calculate file hash
         file_hash = calculate_file_hash(file_content)
         
-        logger.info(f"File validation successful: {filename} ({len(file_content)} bytes)")
-        return True, file_hash
+        logger.info(f"File validation successful: {filename} ({len(file_content)} bytes), password_protected: {is_password_protected}")
+        return True, file_hash, is_password_protected
         
     except (FileValidationError, MaliciousFileError) as e:
         logger.error(f"File validation failed for {filename}: {e}")

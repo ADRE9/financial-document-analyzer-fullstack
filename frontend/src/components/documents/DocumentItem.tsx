@@ -1,4 +1,4 @@
-import { Eye, MoreHorizontal, Trash2 } from "lucide-react";
+import { Eye, MoreHorizontal, Trash2, Lock } from "lucide-react";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
 import {
@@ -38,6 +38,15 @@ export const DocumentItem = ({
             <Badge variant="outline" className="text-xs">
               {getDocumentTypeLabel(document.document_type)}
             </Badge>
+            {document.is_password_protected && (
+              <Badge
+                variant="secondary"
+                className="text-xs flex items-center gap-1"
+              >
+                <Lock className="h-3 w-3" />
+                Protected
+              </Badge>
+            )}
           </div>
           <div className="flex items-center space-x-4 text-sm text-gray-500">
             <span>Uploaded {formatDate(document.processed_at)}</span>
