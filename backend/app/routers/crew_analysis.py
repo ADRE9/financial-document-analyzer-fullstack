@@ -6,10 +6,11 @@ This module provides endpoints for running CrewAI financial document analysis.
 
 import os
 import sys
+import re
 from pathlib import Path
 from fastapi import APIRouter, HTTPException, Depends, status
 from pydantic import BaseModel
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 import asyncio
 import json
 
@@ -43,7 +44,84 @@ class CrewAnalysisResponse(BaseModel):
     analysis_result: Dict[Any, Any]
     execution_time: float
     document_validated: bool
-    error_message: str = None
+    error_message: Optional[str] = None
+    markdown_content: Optional[str] = None  # Extracted markdown for rendering
+    structured_data: Optional[Dict[str, Any]] = None  # Parsed sections
+
+
+def _extract_markdown_from_result(result: Any) -> Optional[str]:
+    """
+    Extract markdown content from crew result.
+    
+    Args:
+        result: The crew analysis result (could be string, dict, or CrewOutput object)
+        
+    Returns:
+        Extracted markdown content as string, or None if not found
+    """
+    # If result has a 'raw' attribute (CrewOutput object)
+    if hasattr(result, 'raw'):
+        content = result.raw
+    # If result is a dict with 'raw_output' key
+    elif isinstance(result, dict) and 'raw_output' in result:
+        content = result['raw_output']
+    # If result is a dict with tasks_output
+    elif isinstance(result, dict) and 'tasks_output' in result:
+        tasks = result['tasks_output']
+        if tasks and len(tasks) > 0:
+            last_task = tasks[-1]
+            if hasattr(last_task, 'raw'):
+                content = last_task.raw
+            elif isinstance(last_task, dict) and 'raw' in last_task:
+                content = last_task['raw']
+            else:
+                content = str(last_task)
+        else:
+            content = str(result)
+    # If result is already a string
+    elif isinstance(result, str):
+        content = result
+    else:
+        content = str(result)
+    
+    # Extract markdown from code blocks if present
+    if '```markdown' in content:
+        # Extract markdown from code block
+        match = re.search(r'```markdown\s*(.*?)\s*```', content, re.DOTALL)
+        if match:
+            return match.group(1).strip()
+    
+    return content.strip()
+
+
+def _parse_markdown_sections(markdown: str) -> Dict[str, Any]:
+    """
+    Parse markdown content into structured sections.
+    
+    Args:
+        markdown: The markdown content to parse
+        
+    Returns:
+        Dictionary with parsed sections
+    """
+    sections = {}
+    
+    # Extract key sections using regex
+    patterns = {
+        'executive_summary': r'##\s*(?:\d+\.\s*)?Executive Summary\s*(.*?)(?=##|\Z)',
+        'investment_thesis': r'##\s*(?:\d+\.\s*)?Investment Thesis\s*(.*?)(?=##|\Z)',
+        'recommendation': r'\*\*Recommendation:\*\*\s*\*\*([^*]+)\*\*',
+        'key_strengths': r'##\s*(?:\d+\.\s*)?Key Strengths(?:\s+and\s+Opportunities)?\s*(.*?)(?=##|\Z)',
+        'key_risks': r'##\s*(?:\d+\.\s*)?Key Risks(?:\s+and\s+Concerns)?\s*(.*?)(?=##|\Z)',
+        'recommendations_section': r'##\s*(?:\d+\.\s*)?Recommendations\s+by\s+Investor\s+Profile\s*(.*?)(?=##|\Z)',
+    }
+    
+    for key, pattern in patterns.items():
+        match = re.search(pattern, markdown, re.DOTALL | re.IGNORECASE)
+        if match:
+            sections[key] = match.group(1).strip()
+    
+    return sections
 
 
 async def _run_crew_analysis_internal(document_path: str, query: str) -> dict:
@@ -128,11 +206,21 @@ async def _run_crew_analysis_internal(document_path: str, query: str) -> dict:
     if isinstance(result, dict) and "document_validation" in result:
         document_validated = result["document_validation"].get("is_financial_document", True)
     
+    # Extract and parse markdown content
+    markdown_content = _extract_markdown_from_result(result)
+    structured_data = None
+    
+    if markdown_content:
+        # Parse markdown into structured sections
+        structured_data = _parse_markdown_sections(markdown_content)
+    
     return {
         "status": "success",
         "analysis_result": result,
         "execution_time": execution_time,
-        "document_validated": document_validated
+        "document_validated": document_validated,
+        "markdown_content": markdown_content,
+        "structured_data": structured_data
     }
 
 

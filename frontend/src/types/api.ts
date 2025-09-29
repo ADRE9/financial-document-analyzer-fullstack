@@ -142,6 +142,15 @@ export interface CrewAnalysisResponse {
   execution_time: number;
   document_validated: boolean;
   error_message?: string;
+  markdown_content?: string;  // Extracted markdown for rendering
+  structured_data?: {  // Parsed markdown sections
+    executive_summary?: string;
+    investment_thesis?: string;
+    recommendation?: string;
+    key_strengths?: string;
+    key_risks?: string;
+    recommendations_section?: string;
+  };
 }
 
 export interface DocumentValidationResponse {
