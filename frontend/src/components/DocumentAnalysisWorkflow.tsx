@@ -109,16 +109,27 @@ export const DocumentAnalysisWorkflow = ({
     try {
       setCurrentStep(1);
 
-      // For this implementation, we need to construct the file path
-      // In a real scenario, the backend should provide the file path or we should store it
-      const documentPath = `/app/uploads/${uploadedDocument.document_id}.pdf`;
+      // Use the document ID to trigger analysis on the backend
+      const result = await runAnalysis(
+        uploadedDocument.document_id,
+        analysisQuery
+      );
 
-      const result = await runAnalysis(documentPath, analysisQuery);
-      setAnalysisResult(result);
+      // Convert DocumentAnalysisResponse to CrewAnalysisResponse format
+      const crewResult: CrewAnalysisResponse = {
+        status: result.status === "completed" ? "success" : "error",
+        analysis_result: result.analysis_results,
+        execution_time: 0, // Not available from document endpoint
+        document_validated: result.status === "completed",
+        error_message:
+          result.status === "failed" ? "Analysis failed" : undefined,
+      };
+
+      setAnalysisResult(crewResult);
       setCurrentStep(2);
 
       toast.success("Analysis completed successfully!");
-      onWorkflowComplete?.(result);
+      onWorkflowComplete?.(crewResult);
     } catch (error) {
       console.error("Analysis failed:", error);
       const errorMessage = createErrorMessage(error, "Analysis failed");

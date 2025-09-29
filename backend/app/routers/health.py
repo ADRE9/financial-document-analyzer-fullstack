@@ -21,7 +21,7 @@ async def health_check():
     return HealthResponse(
         status=HealthStatus.HEALTHY,
         message="API is running successfully",
-        timestamp=datetime.utcnow(),
+        timestamp=datetime.now(timezone.utc),
         version=settings.app_version
     )
 
@@ -40,14 +40,14 @@ async def readiness_check():
         return {
             "status": "ready",
             "message": "API is ready to serve requests",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "databases": db_health
         }
     else:
         return {
             "status": "not_ready",
             "message": "API is not ready - database issues detected",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "databases": db_health
         }
 
@@ -62,7 +62,7 @@ async def liveness_check():
     return {
         "status": "alive",
         "message": "API process is alive",
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
 
@@ -76,6 +76,6 @@ async def database_health_check():
     db_health = await get_database_health()
     
     return {
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         **db_health
     }

@@ -8,7 +8,7 @@ using MongoDB and Beanie ODM.
 import logging
 from typing import Optional
 from fastapi import Depends, HTTPException, status, Request
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials, OAuth2PasswordBearer
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from app.models.user import User, UserSession
 from app.utils.jwt import verify_token
@@ -19,9 +19,6 @@ logger = logging.getLogger(__name__)
 
 # HTTP Bearer token scheme
 security = HTTPBearer()
-
-# OAuth2 scheme for FastAPI pattern
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token")
 
 
 class AuthMiddleware:
@@ -143,91 +140,6 @@ async def get_current_active_user(
     return current_user
 
 
-async def get_current_user_optional(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False))
-) -> Optional[User]:
-    """
-    Get the current user if authenticated, otherwise return None.
-    
-    Args:
-        credentials: Optional HTTP Bearer credentials
-        
-    Returns:
-        Optional[User]: The authenticated user or None
-    """
-    if not credentials:
-        return None
-    
-    try:
-        return await get_current_user(credentials)
-    except HTTPException:
-        return None
-
-
-async def get_current_user_oauth2(token: str = Depends(oauth2_scheme)) -> User:
-    """
-    Get the current authenticated user from JWT token using OAuth2 pattern.
-    
-    This follows the FastAPI OAuth2 with Password pattern exactly.
-    
-    Args:
-        token: The JWT token from OAuth2PasswordBearer
-        
-    Returns:
-        User: The authenticated user
-        
-    Raises:
-        HTTPException: If authentication fails
-    """
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-    
-    try:
-        payload = verify_token(token)
-        username: str = payload.get("sub")
-        if username is None:
-            raise credentials_exception
-    except Exception:
-        raise credentials_exception
-    
-    user = await User.find_by_username(username)
-    if user is None:
-        raise credentials_exception
-    
-    if not user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Inactive user",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    
-    return user
-
-
-async def get_current_active_user_oauth2(current_user: User = Depends(get_current_user_oauth2)) -> User:
-    """
-    Get the current active user using OAuth2 pattern.
-    
-    Args:
-        current_user: The current user from get_current_user_oauth2
-        
-    Returns:
-        User: The active user
-        
-    Raises:
-        HTTPException: If user is not active
-    """
-    if not current_user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Inactive user"
-        )
-    return current_user
-
-
 async def get_current_admin_user(
     current_user: User = Depends(get_current_active_user)
 ) -> User:
@@ -318,5 +230,10 @@ def require_viewer():
     
     Returns:
         Dependency function that checks for viewer role or higher
+        
+    Note:
+        This function is provided for consistency but viewers typically
+        use get_current_active_user since all authenticated users have
+        at least viewer privileges.
     """
     return require_role(UserRole.VIEWER)

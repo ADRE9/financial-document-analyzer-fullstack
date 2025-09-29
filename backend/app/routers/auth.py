@@ -10,7 +10,6 @@ from datetime import datetime, timezone, timedelta
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status, Request
-from fastapi.security import OAuth2PasswordBearer
 from pydantic import BaseModel, Field
 
 # MongoDB/Beanie handles database sessions automatically
@@ -37,9 +36,6 @@ from app.middleware.auth import get_current_user, get_current_active_user
 
 # Configure logging
 logger = logging.getLogger(__name__)
-
-# OAuth2 scheme for consistency with FastAPI pattern
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token")
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
 

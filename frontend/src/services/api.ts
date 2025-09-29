@@ -208,6 +208,12 @@ class ApiClient {
     if (uploadData.password) {
       formData.append("password", uploadData.password);
     }
+    if (uploadData.auto_analyze !== undefined) {
+      formData.append("auto_analyze", uploadData.auto_analyze.toString());
+    }
+    if (uploadData.analysis_query) {
+      formData.append("analysis_query", uploadData.analysis_query);
+    }
 
     return this.request<DocumentAnalysisResponse>("/documents/upload", {
       method: "POST",
@@ -220,6 +226,18 @@ class ApiClient {
     return this.request<SuccessResponse>(`/documents/${id}`, {
       method: "DELETE",
     });
+  }
+
+  async analyzeDocument(
+    id: string,
+    query: string = "Provide a comprehensive financial analysis of this document"
+  ): Promise<DocumentAnalysisResponse> {
+    return this.request<DocumentAnalysisResponse>(
+      `/documents/${id}/analyze?query=${encodeURIComponent(query)}`,
+      {
+        method: "POST",
+      }
+    );
   }
 
   // Authentication endpoints
@@ -320,6 +338,8 @@ export const getDocument = (id: string) => apiClient.getDocument(id);
 export const uploadDocument = (file: File, uploadData: DocumentUploadRequest) =>
   apiClient.uploadDocument(file, uploadData);
 export const deleteDocument = (id: string) => apiClient.deleteDocument(id);
+export const analyzeDocument = (id: string, query?: string) =>
+  apiClient.analyzeDocument(id, query);
 export const register = (userData: UserRegisterRequest) =>
   apiClient.register(userData);
 export const login = (credentials: UserLoginRequest) =>

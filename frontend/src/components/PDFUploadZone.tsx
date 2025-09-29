@@ -35,6 +35,7 @@ export const PDFUploadZone = ({
   const [uploadProgress, setUploadProgress] = useState(0);
   const [password, setPassword] = useState("");
   const [analysisQuery, setAnalysisQuery] = useState("");
+  const [autoAnalyze, setAutoAnalyze] = useState(false);
 
   const uploadMutation = useUploadDocument();
   const { validateFile } = useFileValidation(maxSizeBytes);
@@ -71,6 +72,7 @@ export const PDFUploadZone = ({
     setUploadProgress(0);
     setPassword("");
     setAnalysisQuery("");
+    setAutoAnalyze(false);
   }, []);
 
   const handleUpload = useCallback(async () => {
@@ -100,6 +102,8 @@ export const PDFUploadZone = ({
           document_type: DocumentType.OTHER,
           description: undefined,
           password: password || undefined,
+          auto_analyze: autoAnalyze,
+          analysis_query: analysisQuery || undefined,
         },
       });
 
@@ -274,6 +278,29 @@ export const PDFUploadZone = ({
                 className="mt-3"
               />
             </div>
+
+            {/* Auto-Analyze Option */}
+            <div className="flex items-center space-x-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+              <input
+                id="auto-analyze"
+                type="checkbox"
+                checked={autoAnalyze}
+                onChange={(e) => setAutoAnalyze(e.target.checked)}
+                disabled={uploadMutation.isPending}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <Label
+                htmlFor="auto-analyze"
+                className="text-sm font-medium cursor-pointer select-none"
+              >
+                Analyze immediately after upload
+              </Label>
+            </div>
+            <p className="text-xs text-gray-500">
+              {autoAnalyze
+                ? "✓ Document will be analyzed automatically using CrewAI after upload"
+                : "Document will be uploaded only. You can analyze it later from the document list."}
+            </p>
 
             {/* Upload Button */}
             <div className="flex justify-end space-x-2">

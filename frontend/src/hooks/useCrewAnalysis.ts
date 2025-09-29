@@ -3,12 +3,14 @@ import {
   runCrewAnalysis,
   getCrewHealth,
   validateDocument,
+  analyzeDocument,
 } from "../services/api";
 import type {
   CrewAnalysisRequest,
   CrewAnalysisResponse,
   DocumentValidationResponse,
   CrewHealthResponse,
+  DocumentAnalysisResponse,
 } from "../types/api";
 
 /**
@@ -50,19 +52,35 @@ export const useDocumentValidation = () => {
 };
 
 /**
+ * Hook for analyzing uploaded documents by ID
+ */
+export const useAnalyzeDocument = () => {
+  return useMutation<
+    DocumentAnalysisResponse,
+    Error,
+    { documentId: string; query?: string }
+  >({
+    mutationFn: async ({ documentId, query }) => {
+      return await analyzeDocument(documentId, query);
+    },
+    retry: false,
+  });
+};
+
+/**
  * Combined hook for document upload and analysis workflow
  */
 export const useDocumentAnalysisWorkflow = () => {
-  const analysisMutation = useCrewAnalysis();
+  const analysisMutation = useAnalyzeDocument();
 
   const runAnalysis = async (
-    documentPath: string,
+    documentId: string,
     query: string = "Provide a comprehensive analysis of this financial document"
   ) => {
     try {
       const result = await analysisMutation.mutateAsync({
-        document_path: documentPath,
-        query: query,
+        documentId,
+        query,
       });
       return result;
     } catch (error) {

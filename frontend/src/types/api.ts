@@ -36,6 +36,8 @@ export interface DocumentUploadRequest {
   document_type: DocumentType;
   description?: string;
   password?: string;
+  auto_analyze?: boolean;
+  analysis_query?: string;
 }
 
 export interface DocumentAnalysisResponse {
