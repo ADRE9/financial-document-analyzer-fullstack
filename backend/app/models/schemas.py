@@ -82,7 +82,7 @@ class UserRegisterRequest(BaseModel):
     """User registration request model."""
     username: str = Field(..., min_length=3, max_length=50, description="Username (3-50 characters)")
     email: EmailStr = Field(..., description="Valid email address")
-    password: str = Field(..., min_length=8, max_length=20, description="Password (8-20 characters)")
+    password: str = Field(..., min_length=8, max_length=128, description="Password (8-128 characters)")
     first_name: Optional[str] = Field(None, max_length=100, description="First name")
     last_name: Optional[str] = Field(None, max_length=100, description="Last name")
     role: Optional[UserRole] = Field(UserRole.VIEWER, description="User role (Admin or Viewer, defaults to Viewer)")
@@ -99,18 +99,12 @@ class UserRegisterRequest(BaseModel):
     @classmethod
     def validate_password(cls, v):
         """Validate password strength."""
-        if len(v) < 8:
-            raise ValueError('Password must be at least 8 characters long')
-        if len(v) > 20:
-            raise ValueError('Password must be at most 20 characters long')
+        # Import validation function from utils
+        from app.utils.password import validate_password_strength
         
-        # Check for alphanumeric and special characters
-        has_alpha = bool(re.search(r'[a-zA-Z]', v))
-        has_digit = bool(re.search(r'\d', v))
-        has_special = bool(re.search(r'[!@#$%^&*(),.?":{}|<>]', v))
-        
-        if not (has_alpha and has_digit and has_special):
-            raise ValueError('Password must contain at least one letter, one number, and one special character')
+        is_valid, error_msg = validate_password_strength(v)
+        if not is_valid:
+            raise ValueError(error_msg)
         
         return v
 
@@ -158,24 +152,18 @@ class UserUpdateRequest(BaseModel):
 class PasswordChangeRequest(BaseModel):
     """Password change request model."""
     current_password: str = Field(..., description="Current password")
-    new_password: str = Field(..., min_length=8, max_length=20, description="New password (8-20 characters)")
+    new_password: str = Field(..., min_length=8, max_length=128, description="New password (8-128 characters)")
     
     @field_validator('new_password')
     @classmethod
     def validate_new_password(cls, v):
         """Validate new password strength."""
-        if len(v) < 8:
-            raise ValueError('Password must be at least 8 characters long')
-        if len(v) > 20:
-            raise ValueError('Password must be at most 20 characters long')
+        # Use the centralized validation function
+        from app.utils.password import validate_password_strength
         
-        # Check for alphanumeric and special characters
-        has_alpha = bool(re.search(r'[a-zA-Z]', v))
-        has_digit = bool(re.search(r'\d', v))
-        has_special = bool(re.search(r'[!@#$%^&*(),.?":{}|<>]', v))
-        
-        if not (has_alpha and has_digit and has_special):
-            raise ValueError('Password must contain at least one letter, one number, and one special character')
+        is_valid, error_msg = validate_password_strength(v)
+        if not is_valid:
+            raise ValueError(error_msg)
         
         return v
 
