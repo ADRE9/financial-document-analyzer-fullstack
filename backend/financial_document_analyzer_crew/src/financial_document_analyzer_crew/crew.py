@@ -1,4 +1,4 @@
-from crewai import Agent, Crew, Process, Task
+from crewai import Agent, Crew, Process, Task, LLM
 from crewai.project import CrewBase, agent, crew, task
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from typing import List
@@ -11,6 +11,11 @@ class FinancialDocumentAnalyzerCrew():
     agents: List[BaseAgent]
     tasks: List[Task]
     
+    def __init__(self):
+        super().__init__()
+        # Initialize LLM for all agents
+        self.llm = LLM(model="gemini/gemini-1.5-flash")
+    
     @agent
     def document_analyzer(self) -> Agent:
         """
@@ -21,7 +26,8 @@ class FinancialDocumentAnalyzerCrew():
             config=self.agents_config['document_analyzer'], # type: ignore[index]
             verbose=True,
             allow_delegation=False,  # This agent focuses on document extraction only
-            tools=[FinancialDocumentTool()]  # Tool for reading and validating financial documents
+            tools=[FinancialDocumentTool()],  # Tool for reading and validating financial documents
+            llm=self.llm  # Use Gemini 1.5 Flash for financial document analysis
         )
 
     @agent
@@ -34,7 +40,8 @@ class FinancialDocumentAnalyzerCrew():
             config=self.agents_config['financial_insights_analyst'], # type: ignore[index]
             verbose=True,
             allow_delegation=False,  # This agent focuses on financial analysis only
-            tools=[search_tool]  # Search tool for market benchmarking and industry research
+            tools=[search_tool],  # Search tool for market benchmarking and industry research
+            llm=self.llm  # Use Gemini 1.5 Flash for financial insights analysis
         )
 
     @agent
@@ -47,7 +54,8 @@ class FinancialDocumentAnalyzerCrew():
             config=self.agents_config['risk_assessment_specialist'], # type: ignore[index]
             verbose=True,
             allow_delegation=False,  # This agent focuses on risk assessment only
-            tools=[search_tool]  # Search tool for market risk research and economic indicators
+            tools=[search_tool],  # Search tool for market risk research and economic indicators
+            llm=self.llm  # Use Gemini 1.5 Flash for risk assessment
         )
 
     @agent
@@ -60,7 +68,8 @@ class FinancialDocumentAnalyzerCrew():
             config=self.agents_config['investment_advisor'], # type: ignore[index]
             verbose=True,
             allow_delegation=False,  # This agent synthesizes all previous work
-            tools=[search_tool]  # Search tool for market trends and investment research
+            tools=[search_tool],  # Search tool for market trends and investment research
+            llm=self.llm  # Use Gemini 1.5 Flash for investment recommendations
         )
     
     @task

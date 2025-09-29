@@ -1,4 +1,4 @@
-document_analysis_task:
+document_verification_task:
   description: >
     CRITICAL: First, validate if the document provided at: {document_path} is a financial document.
 

@@ -127,3 +127,44 @@ export interface UserSessionsResponse {
   sessions: SessionInfo[];
   total_sessions: number;
 }
+
+// CrewAI Analysis Types
+export interface CrewAnalysisRequest {
+  document_path: string;
+  query: string;
+}
+
+export interface CrewAnalysisResponse {
+  status: string;
+  analysis_result: Record<string, any>;
+  execution_time: number;
+  document_validated: boolean;
+  error_message?: string;
+}
+
+export interface DocumentValidationResponse {
+  status: string;
+  validation_result: {
+    is_financial_document: boolean;
+    confidence_score?: number;
+    document_type?: string;
+    error?: string;
+    raw_result?: string;
+  };
+  document_path: string;
+}
+
+export interface CrewHealthResponse {
+  status: string;
+  crew_importable: boolean;
+  environment_variables: Record<
+    string,
+    {
+      configured: boolean;
+      is_dummy: boolean;
+    }
+  >;
+  crew_path: string;
+  warnings?: string[];
+  error?: string;
+}
