@@ -30,9 +30,6 @@ dev = [
     "mypy>=1.0.0",
 ]
 
-[project.scripts]
-start = "app.main:start"
-dev = "app.main:start"
 
 [tool.fastapi]
 app = "main:app"

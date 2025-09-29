@@ -10,20 +10,19 @@ from datetime import datetime, timedelta, timezone
 from typing import Dict, Optional
 import logging
 
-from app.dependencies import get_logger
 from app.middleware.auth import get_current_active_user, require_admin
 from app.models.user import User
 from app.models.document import FinancialDocument, DocumentStatus, DocumentType
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
 
+# Configure logging
 logger = logging.getLogger(__name__)
 
 
 @router.get("/overview")
 async def get_analytics_overview(
-    current_user: User = Depends(get_current_active_user),
-    logger=Depends(get_logger)
+    current_user: User = Depends(get_current_active_user)
 ) -> Dict[str, object]:
     """
     Get analytics overview including document counts, processing stats, etc.
@@ -186,8 +185,7 @@ async def get_analytics_overview(
 @router.get("/trends")
 async def get_processing_trends(
     days: int = 30,
-    current_user: User = Depends(get_current_active_user),
-    logger=Depends(get_logger)
+    current_user: User = Depends(get_current_active_user)
 ) -> Dict[str, object]:
     """
     Get processing trends over a specified number of days.
@@ -275,8 +273,7 @@ async def get_processing_trends(
 
 @router.get("/performance")
 async def get_performance_metrics(
-    current_user: User = Depends(get_current_active_user),
-    logger=Depends(get_logger)
+    current_user: User = Depends(get_current_active_user)
 ) -> Dict[str, object]:
     """
     Get performance metrics including response times, error rates, etc.
@@ -378,8 +375,7 @@ async def get_performance_metrics(
 
 @router.get("/document-types")
 async def get_document_type_analytics(
-    current_user: User = Depends(get_current_active_user),
-    logger=Depends(get_logger)
+    current_user: User = Depends(get_current_active_user)
 ) -> Dict[str, object]:
     """
     Get analytics specific to document types.

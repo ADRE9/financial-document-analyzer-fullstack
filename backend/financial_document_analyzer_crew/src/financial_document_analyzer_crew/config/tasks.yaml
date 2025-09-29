@@ -1,10 +1,18 @@
 document_analysis_task:
   description: >
-    Analyze the financial document provided at: {document_path}
+    CRITICAL: First, validate if the document provided at: {document_path} is a financial document.
 
     User Query Context: "{query}"
 
-    Extract all key financial data including:
+    VALIDATION STEP (MANDATORY):
+    1. Use the FinancialDocumentTool to read and validate the document
+    2. Check if confidence score >= 30 and financial indicators are present
+    3. If NOT a financial document (confidence < 30 or insufficient financial keywords):
+       - IMMEDIATELY STOP the analysis workflow
+       - Return error message: "VALIDATION_FAILED: Document does not contain sufficient financial data for analysis"
+       - Do NOT proceed to extract financial data
+
+    ONLY IF VALIDATION PASSES, proceed with financial data extraction:
     - Balance sheet items (assets, liabilities, equity)
     - Income statement data (revenue, expenses, net income)
     - Cash flow information (operating, investing, financing activities)
@@ -17,19 +25,29 @@ document_analysis_task:
     Flag any anomalies, missing information, or inconsistencies found.
     Structure the data in a clear, organized format for further analysis.
   expected_output: >
+    IF VALIDATION FAILS:
+    Return immediately: "VALIDATION_FAILED: Document does not contain sufficient financial data for analysis. Confidence score: [X]%. Found [Y] financial indicators. This document appears to be: [document type]. Please upload a financial document such as financial statements, annual reports, or accounting records."
+
+    IF VALIDATION PASSES:
     A comprehensive structured report containing:
-    1. Document summary (type, entity name, period covered)
-    2. Extracted financial data organized by category (Balance Sheet, Income Statement, Cash Flow)
-    3. Data validation results and quality assessment
-    4. List of any anomalies, inconsistencies, or data quality issues
-    5. Key observations about the document structure and completeness
-    6. Specific data points that relate to the user's query: "{query}"
+    1. VALIDATION_STATUS: "PASSED - Financial document confirmed (confidence: X%)"
+    2. Document summary (type, entity name, period covered)
+    3. Extracted financial data organized by category (Balance Sheet, Income Statement, Cash Flow)
+    4. Data validation results and quality assessment
+    5. List of any anomalies, inconsistencies, or data quality issues
+    6. Key observations about the document structure and completeness
+    7. Specific data points that relate to the user's query: "{query}"
 
     Format as structured markdown with clear sections and data tables for easy parsing by subsequent agents.
   agent: document_analyzer
 
 financial_insights_task:
   description: >
+    PREREQUISITE CHECK: First check if the document analysis task returned "VALIDATION_FAILED".
+    If so, IMMEDIATELY STOP and return: "TASK_SKIPPED: Cannot perform financial insights analysis - document validation failed in previous step."
+
+    ONLY proceed if document validation PASSED in the previous task.
+
     Using the extracted financial data from the document analysis task, perform comprehensive
     financial analysis to address the user's query: "{query}"
 
@@ -45,6 +63,10 @@ financial_insights_task:
     Provide context-rich interpretations that help stakeholders understand the company's
     financial position and performance, particularly as it relates to: "{query}"
   expected_output: >
+    IF VALIDATION FAILED in previous task:
+    "TASK_SKIPPED: Cannot perform financial insights analysis - document validation failed in previous step."
+
+    IF VALIDATION PASSED:
     A detailed financial insights report containing:
     1. Executive summary of financial health (with focus on user's query context)
     2. Key financial ratios with interpretations (current ratio, quick ratio, ROE, ROA,
@@ -60,6 +82,11 @@ financial_insights_task:
 
 risk_assessment_task:
   description: >
+    PREREQUISITE CHECK: First check if the document analysis task returned "VALIDATION_FAILED".
+    If so, IMMEDIATELY STOP and return: "TASK_SKIPPED: Cannot perform risk assessment - document validation failed in document analysis step."
+
+    ONLY proceed if document validation PASSED in the document analysis task.
+
     Based on the financial data and insights from previous tasks, conduct a comprehensive
     risk assessment with particular attention to risks relevant to the user's query: "{query}"
 
@@ -76,6 +103,10 @@ risk_assessment_task:
     Consider how identified risks might impact the aspects addressed in the user's query.
     Recommend risk mitigation strategies where appropriate.
   expected_output: >
+    IF VALIDATION FAILED in document analysis task:
+    "TASK_SKIPPED: Cannot perform risk assessment - document validation failed in document analysis step."
+
+    IF VALIDATION PASSED:
     A comprehensive risk assessment report containing:
     1. Executive risk summary with overall risk rating (Low/Medium/High)
     2. Detailed assessment of each risk category with specific metrics
@@ -91,6 +122,11 @@ risk_assessment_task:
 
 investment_recommendation_task:
   description: >
+    PREREQUISITE CHECK: First check if the document analysis task returned "VALIDATION_FAILED".
+    If so, IMMEDIATELY STOP and return: "TASK_SKIPPED: Cannot provide investment recommendations - document validation failed in document analysis step."
+
+    ONLY proceed if document validation PASSED in the document analysis task.
+
     Synthesize all previous analyses (document analysis, financial insights, risk assessment)
     to provide comprehensive, evidence-based investment recommendations that specifically
     address the user's query: "{query}"
@@ -108,6 +144,10 @@ investment_recommendation_task:
     Ensure recommendations directly address the user's specific question or concern: "{query}"
     Include discussion of key risks and alternative scenarios.
   expected_output: >
+    IF VALIDATION FAILED in document analysis task:
+    "TASK_SKIPPED: Cannot provide investment recommendations - document validation failed in document analysis step."
+
+    IF VALIDATION PASSED:
     A comprehensive investment recommendation report containing:
     1. Executive summary with clear recommendation (Buy/Hold/Sell or Investment Grade rating)
     2. Investment thesis with supporting evidence from financial analysis

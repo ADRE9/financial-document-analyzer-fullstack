@@ -1,6 +1,4 @@
-import sys
 import warnings
-
 from datetime import datetime
 
 from financial_document_analyzer_crew.crew import FinancialDocumentAnalyzerCrew
@@ -29,48 +27,22 @@ def run(document_path: str = None, query: str = None):
     
     try:
         result = FinancialDocumentAnalyzerCrew().crew().kickoff(inputs=inputs)
+        
+        # Check if the result contains validation failure
+        if isinstance(result, str) and "VALIDATION_FAILED" in result:
+            return result  # Return the validation failure message directly
+        
+        # If result is a CrewOutput object, extract the output
+        if hasattr(result, 'raw'):
+            raw_output = result.raw
+            if "VALIDATION_FAILED" in raw_output:
+                return raw_output
+        
         return result
     except Exception as e:
+        # Check if the error is related to validation failure
+        error_msg = str(e)
+        if "VALIDATION_FAILED" in error_msg:
+            return error_msg
         raise Exception(f"An error occurred while running the crew: {e}")
 
-
-def train():
-    """
-    Train the crew for a given number of iterations.
-    """
-    inputs = {
-        'document_path': "/path/to/sample/financial_document.pdf",
-        'query': "What is the overall financial health of this company?",
-        'current_year': str(datetime.now().year)
-    }
-    try:
-        FinancialDocumentAnalyzerCrew().crew().train(n_iterations=int(sys.argv[1]), filename=sys.argv[2], inputs=inputs)
-
-    except Exception as e:
-        raise Exception(f"An error occurred while training the crew: {e}")
-
-def replay():
-    """
-    Replay the crew execution from a specific task.
-    """
-    try:
-        FinancialDocumentAnalyzerCrew().crew().replay(task_id=sys.argv[1])
-
-    except Exception as e:
-        raise Exception(f"An error occurred while replaying the crew: {e}")
-
-def test():
-    """
-    Test the crew execution and returns the results.
-    """
-    inputs = {
-        'document_path': "/path/to/sample/financial_document.pdf",
-        'query': "What is the overall financial health of this company?",
-        'current_year': str(datetime.now().year)
-    }
-    
-    try:
-        FinancialDocumentAnalyzerCrew().crew().test(n_iterations=int(sys.argv[1]), eval_llm=sys.argv[2], inputs=inputs)
-
-    except Exception as e:
-        raise Exception(f"An error occurred while testing the crew: {e}")

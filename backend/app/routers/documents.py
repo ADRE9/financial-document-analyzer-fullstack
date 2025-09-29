@@ -17,7 +17,6 @@ from app.models.schemas import (
 )
 from app.models.document import FinancialDocument, DocumentStatus
 from app.models.user import User
-from app.dependencies import get_logger
 from app.middleware.auth import get_current_active_user
 from app.config import settings
 from app.utils.file_validator import (
@@ -38,8 +37,7 @@ async def list_documents(
     limit: int = 50,
     skip: int = 0,
     document_type: Optional[DocumentType] = None,
-    include_archived: bool = False,
-    logger=Depends(get_logger)
+    include_archived: bool = False
 ):
     """
     List user's documents with pagination and filtering.
@@ -89,8 +87,7 @@ async def upload_document(
     document_type: DocumentType = DocumentType.OTHER,
     description: str = None,
     password: str = None,
-    current_user: User = Depends(get_current_active_user),
-    logger=Depends(get_logger)
+    current_user: User = Depends(get_current_active_user)
 ):
     """
     Upload a PDF document for analysis.
@@ -241,8 +238,7 @@ async def upload_document(
 @router.get("/{document_id}", response_model=DocumentAnalysisResponse)
 async def get_document(
     document_id: str,
-    current_user: User = Depends(get_current_active_user),
-    logger=Depends(get_logger)
+    current_user: User = Depends(get_current_active_user)
 ):
     """
     Get analysis results for a specific document.
@@ -290,8 +286,7 @@ async def get_document(
 @router.delete("/{document_id}", response_model=SuccessResponse)
 async def delete_document(
     document_id: str,
-    current_user: User = Depends(get_current_active_user),
-    logger=Depends(get_logger)
+    current_user: User = Depends(get_current_active_user)
 ):
     """
     Delete a document and its analysis results.

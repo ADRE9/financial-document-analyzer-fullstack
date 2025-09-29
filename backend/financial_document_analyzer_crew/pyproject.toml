@@ -5,15 +5,18 @@ description = "financial_document_analyzer_crew using crewAI"
 authors = [{ name = "Your Name", email = "you@example.com" }]
 requires-python = ">=3.10,<3.14"
 dependencies = [
-    "crewai[tools]>=0.201.0,<1.0.0"
+    "crewai[tools]>=0.201.0,<1.0.0",
+    "crewai-tools>=0.15.0",
+    "google-generativeai>=0.3.0",
+    "python-dotenv>=1.0.0",
+    "PyPDF2>=3.0.0",
+    "pandas>=2.0.0",
+    "openpyxl>=3.1.0"
 ]
 
 [project.scripts]
 financial_document_analyzer_crew = "financial_document_analyzer_crew.main:run"
 run_crew = "financial_document_analyzer_crew.main:run"
-train = "financial_document_analyzer_crew.main:train"
-replay = "financial_document_analyzer_crew.main:replay"
-test = "financial_document_analyzer_crew.main:test"
 
 [build-system]
 requires = ["hatchling"]

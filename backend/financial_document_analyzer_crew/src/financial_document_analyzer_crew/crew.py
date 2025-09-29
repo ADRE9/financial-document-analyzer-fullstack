@@ -2,7 +2,7 @@ from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from typing import List
-from .tools import FinancialDocumentTool
+from .tools import FinancialDocumentTool, search_tool
 
 @CrewBase
 class FinancialDocumentAnalyzerCrew():
@@ -21,7 +21,7 @@ class FinancialDocumentAnalyzerCrew():
             config=self.agents_config['document_analyzer'], # type: ignore[index]
             verbose=True,
             allow_delegation=False,  # This agent focuses on document extraction only
-            tools=[FinancialDocumentTool()]  # Tool for reading financial documents
+            tools=[FinancialDocumentTool()]  # Tool for reading and validating financial documents
         )
 
     @agent
@@ -33,7 +33,8 @@ class FinancialDocumentAnalyzerCrew():
         return Agent(
             config=self.agents_config['financial_insights_analyst'], # type: ignore[index]
             verbose=True,
-            allow_delegation=False  # This agent focuses on financial analysis only
+            allow_delegation=False,  # This agent focuses on financial analysis only
+            tools=[search_tool]  # Search tool for market benchmarking and industry research
         )
 
     @agent
@@ -45,7 +46,8 @@ class FinancialDocumentAnalyzerCrew():
         return Agent(
             config=self.agents_config['risk_assessment_specialist'], # type: ignore[index]
             verbose=True,
-            allow_delegation=False  # This agent focuses on risk assessment only
+            allow_delegation=False,  # This agent focuses on risk assessment only
+            tools=[search_tool]  # Search tool for market risk research and economic indicators
         )
 
     @agent
@@ -57,7 +59,8 @@ class FinancialDocumentAnalyzerCrew():
         return Agent(
             config=self.agents_config['investment_advisor'], # type: ignore[index]
             verbose=True,
-            allow_delegation=False  # This agent synthesizes all previous work
+            allow_delegation=False,  # This agent synthesizes all previous work
+            tools=[search_tool]  # Search tool for market trends and investment research
         )
     
     @task

@@ -1,15 +1,18 @@
 from fastapi import APIRouter, Depends
 from datetime import datetime
+import logging
 from app.models.schemas import HealthResponse, HealthStatus
 from app.config import settings
-from app.dependencies import get_logger
 from app.database import get_database_health
 
 router = APIRouter(prefix="/health", tags=["health"])
 
+# Configure logging
+logger = logging.getLogger(__name__)
+
 
 @router.get("/", response_model=HealthResponse)
-async def health_check(logger=Depends(get_logger)):
+async def health_check():
     """
     Health check endpoint to verify the API is running.
     """
@@ -24,7 +27,7 @@ async def health_check(logger=Depends(get_logger)):
 
 
 @router.get("/ready")
-async def readiness_check(logger=Depends(get_logger)):
+async def readiness_check():
     """
     Readiness check endpoint to verify the API is ready to serve requests.
     """
@@ -50,7 +53,7 @@ async def readiness_check(logger=Depends(get_logger)):
 
 
 @router.get("/live")
-async def liveness_check(logger=Depends(get_logger)):
+async def liveness_check():
     """
     Liveness check endpoint to verify the API process is alive.
     """
@@ -64,7 +67,7 @@ async def liveness_check(logger=Depends(get_logger)):
 
 
 @router.get("/databases")
-async def database_health_check(logger=Depends(get_logger)):
+async def database_health_check():
     """
     Database health check endpoint to verify database connectivity.
     """

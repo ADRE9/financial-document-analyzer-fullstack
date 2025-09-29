@@ -9,7 +9,7 @@ import time
 from datetime import datetime, timezone
 
 from app.config import settings
-from app.routers import health, documents, analytics, auth, protected
+from app.routers import health, documents, analytics, auth, protected, crew_analysis
 from app.models.schemas import ErrorResponse
 from app.database import connect_to_mongodb, close_mongodb_connection
 
@@ -158,6 +158,7 @@ app.include_router(documents.router)
 app.include_router(analytics.router)
 app.include_router(auth.router)
 app.include_router(protected.router)
+app.include_router(crew_analysis.router)
 
 
 # Root endpoint
