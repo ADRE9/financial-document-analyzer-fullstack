@@ -1,6 +1,9 @@
 document_analysis_task:
   description: >
-    Analyze the financial document provided: {document_path}
+    Analyze the financial document provided at: {document_path}
+
+    User Query Context: "{query}"
+
     Extract all key financial data including:
     - Balance sheet items (assets, liabilities, equity)
     - Income statement data (revenue, expenses, net income)
@@ -9,73 +12,88 @@ document_analysis_task:
     - Time periods covered and comparative data
     - Any footnotes or disclaimers that impact interpretation
 
+    Pay special attention to any data points or trends that relate to the user's specific query.
     Validate all extracted data for consistency and completeness.
     Flag any anomalies, missing information, or inconsistencies found.
     Structure the data in a clear, organized format for further analysis.
   expected_output: >
     A comprehensive structured report containing:
     1. Document summary (type, entity name, period covered)
-    2. Extracted financial data organized by category
+    2. Extracted financial data organized by category (Balance Sheet, Income Statement, Cash Flow)
     3. Data validation results and quality assessment
     4. List of any anomalies, inconsistencies, or data quality issues
     5. Key observations about the document structure and completeness
-    Formatted as JSON or structured markdown for easy parsing
+    6. Specific data points that relate to the user's query: "{query}"
+
+    Format as structured markdown with clear sections and data tables for easy parsing by subsequent agents.
   agent: document_analyzer
 
 financial_insights_task:
   description: >
     Using the extracted financial data from the document analysis task, perform comprehensive
-    financial analysis including:
+    financial analysis to address the user's query: "{query}"
+
+    Perform the following analysis:
     - Calculate key financial ratios (liquidity, profitability, leverage, efficiency)
     - Identify trends and patterns in financial performance
     - Compare current performance against historical data (if available)
     - Assess financial health and operational efficiency
     - Identify strengths and weaknesses in the financial position
     - Highlight notable changes or trends that require attention
+    - Focus analysis on aspects most relevant to the user's specific query
 
     Provide context-rich interpretations that help stakeholders understand the company's
-    financial position and performance.
+    financial position and performance, particularly as it relates to: "{query}"
   expected_output: >
     A detailed financial insights report containing:
-    1. Executive summary of financial health
+    1. Executive summary of financial health (with focus on user's query context)
     2. Key financial ratios with interpretations (current ratio, quick ratio, ROE, ROA,
        debt-to-equity, profit margins, asset turnover, etc.)
     3. Trend analysis with period-over-period comparisons
     4. Strengths and weaknesses assessment
     5. Notable observations and areas requiring attention
     6. Industry context and benchmark comparisons (if applicable)
-    Formatted as markdown with clear sections and data tables
+    7. Specific insights addressing the user's query: "{query}"
+
+    Format as structured markdown with clear sections, data tables, and professional financial analysis.
   agent: financial_insights_analyst
 
 risk_assessment_task:
   description: >
     Based on the financial data and insights from previous tasks, conduct a comprehensive
-    risk assessment covering:
+    risk assessment with particular attention to risks relevant to the user's query: "{query}"
+
+    Assess the following risk categories:
     - Credit risk: Ability to meet debt obligations
     - Liquidity risk: Short-term cash flow adequacy
     - Solvency risk: Long-term financial viability
     - Market risk: Exposure to market volatility and economic cycles
     - Operational risk: Business model sustainability and operational efficiency
+    - Specific risks related to the user's area of concern: "{query}"
 
     Quantify risks where possible using appropriate metrics (Z-score, Altman score, etc.)
     Provide specific risk indicators and early warning signals.
+    Consider how identified risks might impact the aspects addressed in the user's query.
     Recommend risk mitigation strategies where appropriate.
   expected_output: >
     A comprehensive risk assessment report containing:
     1. Executive risk summary with overall risk rating (Low/Medium/High)
     2. Detailed assessment of each risk category with specific metrics
-    3. Risk quantification using appropriate scoring models
+    3. Risk quantification using appropriate scoring models (Z-score, Altman score, etc.)
     4. Early warning indicators and trigger points
     5. Risk mitigation recommendations
     6. Scenario analysis (best case, base case, worst case)
-    7. Key assumptions and limitations of the risk assessment
-    Formatted as markdown with clear risk ratings and actionable recommendations
+    7. Specific risk considerations related to the user's query: "{query}"
+    8. Key assumptions and limitations of the risk assessment
+
+    Format as structured markdown with clear risk ratings, quantitative metrics, and actionable recommendations.
   agent: risk_assessment_specialist
 
 investment_recommendation_task:
   description: >
     Synthesize all previous analyses (document analysis, financial insights, risk assessment)
-    to provide comprehensive, evidence-based investment recommendations.
+    to provide comprehensive, evidence-based investment recommendations that specifically
+    address the user's query: "{query}"
 
     Consider:
     - Overall financial health and performance trends
@@ -83,20 +101,25 @@ investment_recommendation_task:
     - Industry position and competitive advantages
     - Growth prospects and sustainability
     - Valuation considerations (if applicable)
+    - Specific factors relevant to the user's query and investment concerns
 
     Provide clear investment recommendations with rationale, considering different
     investor profiles (conservative, moderate, aggressive) and time horizons.
+    Ensure recommendations directly address the user's specific question or concern: "{query}"
     Include discussion of key risks and alternative scenarios.
   expected_output: >
     A comprehensive investment recommendation report containing:
     1. Executive summary with clear recommendation (Buy/Hold/Sell or Investment Grade rating)
     2. Investment thesis with supporting evidence from financial analysis
-    3. Key strengths and opportunities
-    4. Key risks and concerns
-    5. Recommendations by investor profile (conservative, moderate, aggressive)
-    6. Alternative scenarios and sensitivity analysis
-    7. Key assumptions and limitations
-    8. Regulatory disclaimer about the nature of the analysis
-    Formatted as markdown with professional investment report structure.
-    All recommendations must be evidence-based and include appropriate disclaimers.
+    3. Direct response to the user's specific query: "{query}"
+    4. Key strengths and opportunities
+    5. Key risks and concerns
+    6. Recommendations by investor profile (conservative, moderate, aggressive)
+    7. Alternative scenarios and sensitivity analysis
+    8. Key assumptions and limitations
+    9. Regulatory disclaimer about the nature of the analysis
+
+    Format as professional markdown investment report with clear sections, executive summary,
+    and evidence-based recommendations. All recommendations must be supported by the
+    financial analysis conducted and include appropriate regulatory disclaimers.
   agent: investment_advisor
