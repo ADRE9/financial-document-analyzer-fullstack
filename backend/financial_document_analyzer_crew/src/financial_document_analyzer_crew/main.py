@@ -13,11 +13,22 @@ def run(document_path: str = None, query: str = None):
         document_path: Path to the financial document to analyze
         query: User query about the financial document
     """
+    import os
+    
     # Default values for testing if not provided
     if document_path is None:
-        document_path = "/path/to/sample/financial_document.pdf"
+        # Use one of the PDFs from the uploads directory
+        uploads_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))), "uploads")
+        document_path = os.path.join(uploads_dir, "39d1a31f-7b8d-4be2-87ff-9ad078c2f3a8.pdf")
     if query is None:
         query = "What is the overall financial health of this company?"
+    
+    print(f"\n{'='*80}")
+    print(f"Starting Financial Document Analysis")
+    print(f"{'='*80}")
+    print(f"Document: {document_path}")
+    print(f"Query: {query}")
+    print(f"{'='*80}\n")
     
     inputs = {
         'document_path': document_path,

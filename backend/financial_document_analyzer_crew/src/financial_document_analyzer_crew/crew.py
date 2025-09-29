@@ -14,7 +14,7 @@ class FinancialDocumentAnalyzerCrew():
     def __init__(self):
         super().__init__()
         # Initialize LLM for all agents
-        self.llm = LLM(model="gemini/gemini-1.5-flash")
+        self.llm = LLM(model="gemini/gemini-2.0-flash")
     
     @agent
     def document_analyzer(self) -> Agent:
@@ -27,7 +27,7 @@ class FinancialDocumentAnalyzerCrew():
             verbose=True,
             allow_delegation=False,  # This agent focuses on document extraction only
             tools=[FinancialDocumentTool()],  # Tool for reading and validating financial documents
-            llm=self.llm  # Use Gemini 1.5 Flash for financial document analysis
+            llm=self.llm  # Use Gemini 2.0 Flash for financial document analysis
         )
 
     @agent
@@ -41,7 +41,7 @@ class FinancialDocumentAnalyzerCrew():
             verbose=True,
             allow_delegation=False,  # This agent focuses on financial analysis only
             tools=[search_tool],  # Search tool for market benchmarking and industry research
-            llm=self.llm  # Use Gemini 1.5 Flash for financial insights analysis
+            llm=self.llm  # Use Gemini 2.0 Flash for financial insights analysis
         )
 
     @agent
@@ -55,7 +55,7 @@ class FinancialDocumentAnalyzerCrew():
             verbose=True,
             allow_delegation=False,  # This agent focuses on risk assessment only
             tools=[search_tool],  # Search tool for market risk research and economic indicators
-            llm=self.llm  # Use Gemini 1.5 Flash for risk assessment
+            llm=self.llm  # Use Gemini 2.0 Flash for risk assessment
         )
 
     @agent
@@ -69,36 +69,39 @@ class FinancialDocumentAnalyzerCrew():
             verbose=True,
             allow_delegation=False,  # This agent synthesizes all previous work
             tools=[search_tool],  # Search tool for market trends and investment research
-            llm=self.llm  # Use Gemini 1.5 Flash for investment recommendations
+            llm=self.llm  # Use Gemini 2.0 Flash for investment recommendations
         )
     
     @task
-    def document_analysis_task(self) -> Task:
+    def document_verification_task(self) -> Task:
         """
-        Task: Extract and validate financial data from documents
+        Task: Verify and extract financial data from documents
         """
         return Task(
-            config=self.tasks_config['document_analysis_task'], # type: ignore[index]
+            config=self.tasks_config['document_verification_task'], # type: ignore[index]
+            agent=self.document_analyzer()
         )
 
     @task
     def financial_insights_task(self) -> Task:
         """
         Task: Analyze financial metrics and calculate key ratios
-        Dependencies: Requires output from document_analysis_task
+        Dependencies: Requires output from document_verification_task
         """
         return Task(
             config=self.tasks_config['financial_insights_task'], # type: ignore[index]
+            agent=self.financial_insights_analyst()
         )
 
     @task
     def risk_assessment_task(self) -> Task:
         """
         Task: Assess financial and operational risks
-        Dependencies: Requires output from document_analysis_task and financial_insights_task
+        Dependencies: Requires output from document_verification_task and financial_insights_task
         """
         return Task(
             config=self.tasks_config['risk_assessment_task'], # type: ignore[index]
+            agent=self.risk_assessment_specialist()
         )
 
     @task
@@ -109,6 +112,7 @@ class FinancialDocumentAnalyzerCrew():
         """
         return Task(
             config=self.tasks_config['investment_recommendation_task'], # type: ignore[index]
+            agent=self.investment_advisor(),
             output_file='investment_analysis_report.md'
         )
 
