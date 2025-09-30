@@ -1,12 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 import uuid
 import logging
 import os
 import hashlib
 from pathlib import Path
 import aiofiles
+import asyncio
+import sys
 
 from app.models.schemas import (
     DocumentUploadRequest, 
@@ -17,7 +19,6 @@ from app.models.schemas import (
 )
 from app.models.document import FinancialDocument, DocumentStatus
 from app.models.user import User
-from app.dependencies import get_logger
 from app.middleware.auth import get_current_active_user
 from app.config import settings
 from app.utils.file_validator import (
@@ -31,6 +32,16 @@ router = APIRouter(prefix="/documents", tags=["documents"])
 # Configure logging
 logger = logging.getLogger(__name__)
 
+# Import CrewAI for analysis
+crew_path = Path(__file__).parent.parent.parent / "financial_document_analyzer_crew" / "src"
+sys.path.insert(0, str(crew_path))
+
+try:
+    from financial_document_analyzer_crew.main import run as run_crew
+except ImportError as e:
+    logger.warning(f"CrewAI not available: {e}")
+    run_crew = None
+
 
 @router.get("/", response_model=List[DocumentAnalysisResponse])
 async def list_documents(
@@ -38,8 +49,7 @@ async def list_documents(
     limit: int = 50,
     skip: int = 0,
     document_type: Optional[DocumentType] = None,
-    include_archived: bool = False,
-    logger=Depends(get_logger)
+    include_archived: bool = False
 ):
     """
     List user's documents with pagination and filtering.
@@ -89,8 +99,9 @@ async def upload_document(
     document_type: DocumentType = DocumentType.OTHER,
     description: str = None,
     password: str = None,
-    current_user: User = Depends(get_current_active_user),
-    logger=Depends(get_logger)
+    auto_analyze: bool = False,
+    analysis_query: str = "Provide a comprehensive financial analysis of this document",
+    current_user: User = Depends(get_current_active_user)
 ):
     """
     Upload a PDF document for analysis.
@@ -102,6 +113,15 @@ async def upload_document(
     - File signature validation
     - PDF structure validation
     - Password-protected PDF support
+    
+    Args:
+        file: The PDF file to upload
+        document_type: Type of the document
+        description: Optional description
+        password: Password for password-protected PDFs
+        auto_analyze: If True, automatically trigger CrewAI analysis after upload
+        analysis_query: Query to use for analysis if auto_analyze is True
+        current_user: Authenticated user
     """
     logger.info(f"Document upload requested: {file.filename} by user {current_user.id}")
     
@@ -207,14 +227,72 @@ async def upload_document(
         
         logger.info(f"Document {document.id} uploaded successfully by user {current_user.id}")
         
+        # Auto-analyze if requested
+        if auto_analyze and run_crew:
+            try:
+                logger.info(f"Starting automatic analysis for document {document.id}")
+                
+                # Mark document as processing
+                await document.start_processing()
+                
+                # Run crew analysis
+                def run_analysis():
+                    return run_crew(
+                        document_path=document.file_path,
+                        query=analysis_query
+                    )
+                
+                loop = asyncio.get_event_loop()
+                result = await loop.run_in_executor(None, run_analysis)
+                
+                # Process the result
+                analysis_results = {}
+                confidence_score = 0.85
+                
+                if isinstance(result, str):
+                    if "VALIDATION_FAILED" in result:
+                        await document.fail_processing("Document is not a valid financial document")
+                        analysis_results = {"status": "failed", "error": "Not a financial document"}
+                    else:
+                        analysis_results = {"raw_output": result}
+                elif hasattr(result, 'raw'):
+                    raw_output = result.raw
+                    if "VALIDATION_FAILED" in raw_output:
+                        await document.fail_processing("Document is not a valid financial document")
+                        analysis_results = {"status": "failed", "error": "Not a financial document"}
+                    else:
+                        analysis_results = {"raw_output": raw_output}
+                        if hasattr(result, 'json_dict') and result.json_dict:
+                            analysis_results["structured_data"] = result.json_dict
+                elif isinstance(result, dict):
+                    analysis_results = result
+                else:
+                    analysis_results = {"result": str(result)}
+                
+                # Mark processing as complete if not failed
+                if document.status != DocumentStatus.FAILED:
+                    await document.complete_processing(
+                        analysis_results=analysis_results,
+                        confidence_score=confidence_score
+                    )
+                    logger.info(f"Automatic analysis completed for document {document.id}")
+                
+            except Exception as analysis_error:
+                logger.error(f"Auto-analysis failed for document {document.id}: {analysis_error}")
+                await document.fail_processing(str(analysis_error))
+                # Don't raise error - upload succeeded even if analysis failed
+        
+        # Refresh document from database to get latest state
+        document = await FinancialDocument.find_by_id(str(document.id))
+        
         # Return document analysis response
         return DocumentAnalysisResponse(
             document_id=str(document.id),
             filename=document.filename,
             document_type=document.document_type,
-            analysis_results={"status": "uploaded", "message": "Document uploaded successfully. Analysis will begin shortly."},
-            confidence_score=0.0,
-            processed_at=document.created_at.isoformat(),
+            analysis_results=document.analysis_results or {"status": "uploaded", "message": "Document uploaded successfully."},
+            confidence_score=document.confidence_score or 0.0,
+            processed_at=document.processing_completed_at.isoformat() if document.processing_completed_at else document.created_at.isoformat(),
             status=document.status.value,
             is_password_protected=document.is_password_protected
         )
@@ -241,8 +319,7 @@ async def upload_document(
 @router.get("/{document_id}", response_model=DocumentAnalysisResponse)
 async def get_document(
     document_id: str,
-    current_user: User = Depends(get_current_active_user),
-    logger=Depends(get_logger)
+    current_user: User = Depends(get_current_active_user)
 ):
     """
     Get analysis results for a specific document.
@@ -287,11 +364,149 @@ async def get_document(
         )
 
 
+@router.post("/{document_id}/analyze", response_model=DocumentAnalysisResponse)
+async def analyze_document(
+    document_id: str,
+    query: str = "Provide a comprehensive financial analysis of this document",
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Trigger CrewAI analysis on an uploaded document.
+    
+    Args:
+        document_id: ID of the document to analyze
+        query: Analysis query (default: comprehensive financial analysis)
+        current_user: Authenticated user
+        
+    Returns:
+        Updated document with analysis results
+    """
+    logger.info(f"Document analysis requested: {document_id} by user {current_user.id}")
+    
+    try:
+        # Get document from database
+        document = await FinancialDocument.find_by_id(document_id)
+        
+        if not document:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Document not found"
+            )
+        
+        # Check if user owns the document (or is admin)
+        if document.user_id != str(current_user.id) and not current_user.is_admin():
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied"
+            )
+        
+        # Check if CrewAI is available
+        if not run_crew:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="CrewAI analysis service is not available"
+            )
+        
+        # Check if document file exists
+        if not os.path.exists(document.file_path):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Document file not found on server"
+            )
+        
+        # Mark document as processing
+        await document.start_processing()
+        
+        try:
+            # Run crew analysis in background
+            def run_analysis():
+                return run_crew(
+                    document_path=document.file_path,
+                    query=query
+                )
+            
+            loop = asyncio.get_event_loop()
+            result = await loop.run_in_executor(None, run_analysis)
+            
+            # Process the result
+            analysis_results = {}
+            confidence_score = 0.85  # Default confidence
+            extracted_text = None
+            
+            if isinstance(result, str):
+                # Check for validation failure
+                if "VALIDATION_FAILED" in result:
+                    await document.fail_processing("Document is not a valid financial document")
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="Document validation failed: Not a financial document"
+                    )
+                # Store raw output
+                analysis_results = {"raw_output": result}
+            elif hasattr(result, 'raw'):
+                # CrewOutput object
+                raw_output = result.raw
+                if "VALIDATION_FAILED" in raw_output:
+                    await document.fail_processing("Document is not a valid financial document")
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="Document validation failed: Not a financial document"
+                    )
+                analysis_results = {"raw_output": raw_output}
+                
+                # Try to extract structured data if available
+                if hasattr(result, 'json_dict') and result.json_dict:
+                    analysis_results["structured_data"] = result.json_dict
+            elif isinstance(result, dict):
+                analysis_results = result
+            else:
+                analysis_results = {"result": str(result)}
+            
+            # Mark processing as complete
+            await document.complete_processing(
+                analysis_results=analysis_results,
+                confidence_score=confidence_score,
+                extracted_text=extracted_text
+            )
+            
+            logger.info(f"Document {document_id} analyzed successfully")
+            
+            return DocumentAnalysisResponse(
+                document_id=str(document.id),
+                filename=document.filename,
+                document_type=document.document_type,
+                analysis_results=analysis_results,
+                confidence_score=confidence_score,
+                processed_at=document.processing_completed_at.isoformat(),
+                status=document.status.value,
+                is_password_protected=document.is_password_protected
+            )
+            
+        except Exception as analysis_error:
+            # Mark processing as failed
+            error_msg = str(analysis_error)
+            await document.fail_processing(error_msg)
+            logger.error(f"Analysis failed for document {document_id}: {error_msg}")
+            
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Analysis failed: {error_msg}"
+            )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error analyzing document {document_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to analyze document"
+        )
+
+
 @router.delete("/{document_id}", response_model=SuccessResponse)
 async def delete_document(
     document_id: str,
-    current_user: User = Depends(get_current_active_user),
-    logger=Depends(get_logger)
+    current_user: User = Depends(get_current_active_user)
 ):
     """
     Delete a document and its analysis results.

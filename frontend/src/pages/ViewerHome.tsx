@@ -7,7 +7,7 @@ import { useAuth } from "../hooks/useAuthContext";
 import { useLogout } from "../hooks/useLogout";
 import { AppHeader } from "../components/layout/AppHeader";
 import { WelcomeSection } from "../components/dashboard/WelcomeSection";
-import PDFUploadZone from "../components/PDFUploadZone";
+import DocumentAnalysisWorkflow from "../components/DocumentAnalysisWorkflow";
 import DocumentList from "../components/DocumentList";
 
 const ViewerHome = () => {
@@ -42,21 +42,19 @@ const ViewerHome = () => {
           description="Welcome to your document viewer. Your access level allows you to view and analyze financial documents."
         />
 
-        {/* PDF Upload Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-          <PDFUploadZone
-            onUploadSuccess={(document) => {
-              toast.success(
-                `Document "${document.filename}" uploaded successfully!`
-              );
-              // The document list will automatically refresh via React Query
+        {/* Document Analysis Workflow */}
+        <div className="mb-8">
+          <DocumentAnalysisWorkflow
+            onWorkflowComplete={(analysisResult) => {
+              toast.success("Document analysis completed successfully!");
+              console.log("Analysis completed:", analysisResult);
             }}
-            onUploadError={(error) => {
-              toast.error(`Upload failed: ${error}`);
-            }}
-            maxSizeBytes={10 * 1024 * 1024} // 10MB limit for security
           />
+        </div>
 
+        {/* Previous Documents */}
+        <div className="mb-8">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Previous Documents</h2>
           <DocumentList
             onDocumentSelect={(document) => {
               toast.info(`Viewing document: ${document.filename}`);

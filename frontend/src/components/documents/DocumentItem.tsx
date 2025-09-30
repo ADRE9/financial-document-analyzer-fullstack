@@ -1,4 +1,4 @@
-import { Eye, MoreHorizontal, Trash2, Lock } from "lucide-react";
+import { Eye, MoreHorizontal, Trash2, Lock, Play } from "lucide-react";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
 import {
@@ -6,6 +6,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "../ui/dropdown-menu";
 import type { DocumentAnalysisResponse } from "../../types/api";
 import { DocumentStatusIcon } from "./DocumentStatusIcon";
@@ -16,13 +17,19 @@ interface DocumentItemProps {
   document: DocumentAnalysisResponse;
   onView: (document: DocumentAnalysisResponse) => void;
   onDelete: (document: DocumentAnalysisResponse) => void;
+  onAnalyze?: (document: DocumentAnalysisResponse) => void;
 }
 
 export const DocumentItem = ({
   document,
   onView,
   onDelete,
+  onAnalyze,
 }: DocumentItemProps) => {
+  const canAnalyze =
+    document.status === "uploaded" || document.status === "failed";
+  const isProcessing = document.status === "processing";
+
   return (
     <div className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors">
       <div className="flex items-center space-x-4 flex-1 min-w-0">
@@ -50,11 +57,6 @@ export const DocumentItem = ({
           </div>
           <div className="flex items-center space-x-4 text-sm text-gray-500">
             <span>Uploaded {formatDate(document.processed_at)}</span>
-            {document.confidence_score > 0 && (
-              <span>
-                Confidence: {Math.round(document.confidence_score * 100)}%
-              </span>
-            )}
           </div>
         </div>
       </div>
@@ -66,7 +68,7 @@ export const DocumentItem = ({
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm">
+            <Button variant="ghost" size="sm" disabled={isProcessing}>
               <MoreHorizontal className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -75,9 +77,20 @@ export const DocumentItem = ({
               <Eye className="h-4 w-4 mr-2" />
               View Details
             </DropdownMenuItem>
+            {onAnalyze && canAnalyze && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => onAnalyze(document)}>
+                  <Play className="h-4 w-4 mr-2" />
+                  {document.status === "failed" ? "Re-analyze" : "Analyze"}
+                </DropdownMenuItem>
+              </>
+            )}
+            <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={() => onDelete(document)}
               className="text-red-600"
+              disabled={isProcessing}
             >
               <Trash2 className="h-4 w-4 mr-2" />
               Delete

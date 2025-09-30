@@ -10,7 +10,6 @@ import "./index.css";
 import { AuthProvider } from "./contexts/AuthContext";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
-import Home from "./pages/Home";
 import SmartHome from "./pages/SmartHome";
 import AdminHome from "./pages/AdminHome";
 import AdminDocuments from "./pages/AdminDocuments";
@@ -102,15 +101,6 @@ const router = createBrowserRouter([
         element: (
           <ProtectedRoute>
             <Unauthorized />
-          </ProtectedRoute>
-        ),
-      },
-      // Legacy home route for backward compatibility
-      {
-        path: "legacy-home",
-        element: (
-          <ProtectedRoute>
-            <Home />
           </ProtectedRoute>
         ),
       },

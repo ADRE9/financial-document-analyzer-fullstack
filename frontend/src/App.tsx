@@ -119,9 +119,6 @@ function App() {
                         <p className="text-sm text-gray-600 capitalize">
                           {doc.document_type}
                         </p>
-                        <p className="text-sm text-gray-500">
-                          Confidence: {(doc.confidence_score * 100).toFixed(1)}%
-                        </p>
                       </div>
                       <div className="text-right text-sm text-gray-500">
                         <p>{new Date(doc.processed_at).toLocaleDateString()}</p>

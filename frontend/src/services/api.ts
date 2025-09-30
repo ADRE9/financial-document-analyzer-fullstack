@@ -14,6 +14,10 @@ import type {
   PasswordChangeRequest,
   LogoutRequest,
   UserSessionsResponse,
+  CrewAnalysisRequest,
+  CrewAnalysisResponse,
+  DocumentValidationResponse,
+  CrewHealthResponse,
 } from "../types/api";
 import { tokenManager } from "../utils/tokenManager";
 
@@ -82,13 +86,16 @@ class ApiClient {
               const errorData: ErrorResponse = await retryResponse.json();
               errorMessage =
                 errorData.detail || errorData.error || errorMessage;
-            } catch (parseError) {
+            } catch {
               errorMessage = `Request failed with status ${retryResponse.status}`;
             }
 
-            const error = new Error(errorMessage);
-            (error as any).status = retryResponse.status;
-            (error as any).response = { status: retryResponse.status };
+            const error = new Error(errorMessage) as Error & {
+              status: number;
+              response: { status: number };
+            };
+            error.status = retryResponse.status;
+            error.response = { status: retryResponse.status };
             throw error;
           }
 
@@ -98,7 +105,7 @@ class ApiClient {
           }
 
           return await retryResponse.json();
-        } catch (refreshError) {
+        } catch {
           // If refresh fails, clear tokens and throw original error
           tokenManager.clearTokens();
           throw new Error("Session expired. Please log in again.");
@@ -111,7 +118,7 @@ class ApiClient {
         try {
           const errorData: ErrorResponse = await response.json();
           errorMessage = errorData.detail || errorData.error || errorMessage;
-        } catch (parseError) {
+        } catch {
           // If we can't parse the error response, use status-based messages
           switch (response.status) {
             case 400:
@@ -151,9 +158,12 @@ class ApiClient {
           }
         }
 
-        const error = new Error(errorMessage);
-        (error as any).status = response.status;
-        (error as any).response = { status: response.status };
+        const error = new Error(errorMessage) as Error & {
+          status: number;
+          response: { status: number };
+        };
+        error.status = response.status;
+        error.response = { status: response.status };
         throw error;
       }
 
@@ -198,6 +208,12 @@ class ApiClient {
     if (uploadData.password) {
       formData.append("password", uploadData.password);
     }
+    if (uploadData.auto_analyze !== undefined) {
+      formData.append("auto_analyze", uploadData.auto_analyze.toString());
+    }
+    if (uploadData.analysis_query) {
+      formData.append("analysis_query", uploadData.analysis_query);
+    }
 
     return this.request<DocumentAnalysisResponse>("/documents/upload", {
       method: "POST",
@@ -210,6 +226,18 @@ class ApiClient {
     return this.request<SuccessResponse>(`/documents/${id}`, {
       method: "DELETE",
     });
+  }
+
+  async analyzeDocument(
+    id: string,
+    query: string = "Provide a comprehensive financial analysis of this document"
+  ): Promise<DocumentAnalysisResponse> {
+    return this.request<DocumentAnalysisResponse>(
+      `/documents/${id}/analyze?query=${encodeURIComponent(query)}`,
+      {
+        method: "POST",
+      }
+    );
   }
 
   // Authentication endpoints
@@ -275,25 +303,86 @@ class ApiClient {
       method: "DELETE",
     });
   }
+
+  // Analytics endpoints
+  async getAnalyticsOverview(): Promise<any> {
+    return this.request<any>("/analytics/overview");
+  }
+
+  async getProcessingTrends(days: number = 30): Promise<any> {
+    return this.request<any>(`/analytics/trends?days=${days}`);
+  }
+
+  async getPerformanceMetrics(): Promise<any> {
+    return this.request<any>("/analytics/performance");
+  }
+
+  async getDocumentTypeAnalytics(): Promise<any> {
+    return this.request<any>("/analytics/document-types");
+  }
+
+  // CrewAI Analysis endpoints
+  async runCrewAnalysis(
+    requestData: CrewAnalysisRequest
+  ): Promise<CrewAnalysisResponse> {
+    return this.request<CrewAnalysisResponse>("/crew/analyze", {
+      method: "POST",
+      body: JSON.stringify(requestData),
+    });
+  }
+
+  async getCrewHealth(): Promise<CrewHealthResponse> {
+    return this.request<CrewHealthResponse>("/crew/health");
+  }
+
+  async validateDocument(
+    requestData: CrewAnalysisRequest
+  ): Promise<DocumentValidationResponse> {
+    return this.request<DocumentValidationResponse>("/crew/validate-document", {
+      method: "POST",
+      body: JSON.stringify(requestData),
+    });
+  }
 }
 
 // Create and export API client instance
 export const apiClient = new ApiClient(API_BASE_URL);
 
-// Export individual methods for convenience
-export const {
-  getHealth,
-  getDocuments,
-  getDocument,
-  uploadDocument,
-  deleteDocument,
-  register,
-  login,
-  logout,
-  refreshToken,
-  getCurrentUser,
-  updateUser,
-  changePassword,
-  getUserSessions,
-  revokeSession,
-} = apiClient;
+// Export individual methods for convenience with proper binding
+export const getHealth = () => apiClient.getHealth();
+export const getDocuments = () => apiClient.getDocuments();
+export const getDocument = (id: string) => apiClient.getDocument(id);
+export const uploadDocument = (file: File, uploadData: DocumentUploadRequest) =>
+  apiClient.uploadDocument(file, uploadData);
+export const deleteDocument = (id: string) => apiClient.deleteDocument(id);
+export const analyzeDocument = (id: string, query?: string) =>
+  apiClient.analyzeDocument(id, query);
+export const register = (userData: UserRegisterRequest) =>
+  apiClient.register(userData);
+export const login = (credentials: UserLoginRequest) =>
+  apiClient.login(credentials);
+export const logout = (logoutData: LogoutRequest = {}) =>
+  apiClient.logout(logoutData);
+export const refreshToken = () => apiClient.refreshToken();
+export const getCurrentUser = () => apiClient.getCurrentUser();
+export const updateUser = (userData: UserUpdateRequest) =>
+  apiClient.updateUser(userData);
+export const changePassword = (passwordData: PasswordChangeRequest) =>
+  apiClient.changePassword(passwordData);
+export const getUserSessions = () => apiClient.getUserSessions();
+export const revokeSession = (sessionId: number) =>
+  apiClient.revokeSession(sessionId);
+export const runCrewAnalysis = (requestData: CrewAnalysisRequest) =>
+  apiClient.runCrewAnalysis(requestData);
+export const getCrewHealth = (): Promise<CrewHealthResponse> =>
+  apiClient.getCrewHealth();
+export const validateDocument = (
+  requestData: CrewAnalysisRequest
+): Promise<DocumentValidationResponse> =>
+  apiClient.validateDocument(requestData);
+export const getAnalyticsOverview = () => apiClient.getAnalyticsOverview();
+export const getProcessingTrends = (days?: number) =>
+  apiClient.getProcessingTrends(days);
+export const getPerformanceMetrics = () => apiClient.getPerformanceMetrics();
+export const getDocumentTypeAnalytics = () =>
+  apiClient.getDocumentTypeAnalytics();

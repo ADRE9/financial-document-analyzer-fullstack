@@ -50,6 +50,18 @@ class Settings(BaseSettings):
         "http://127.0.0.1:5174"
     ]
     
+    # CrewAI API Keys
+    gemini_api_key: Optional[str] = None
+    serper_api_key: Optional[str] = None
+    
+    # LLM Configuration - Using Gemini only
+    # Model Configuration
+    gemini_model_name: str = "gemini-pro"
+    model: str = "gemini/gemini-1.5-flash"
+    
+    # CrewAI Configuration
+    crewai_telemetry_opt_out: bool = True
+    
     @property
     def database_url(self) -> str:
         """Generate MongoDB connection URL from individual components."""

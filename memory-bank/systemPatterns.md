@@ -128,6 +128,50 @@ src/
 - Detailed logging for debugging
 - User-friendly error messages
 
+## Development Environment Patterns
+
+### Virtual Environment Management
+
+**Critical Rule:** Single virtual environment per project component
+
+- **Backend Python:** `backend/venv/` - Single Python virtual environment
+
+  - Python 3.13.1
+  - All dependencies from `requirements.txt`
+  - 50+ packages including FastAPI, Motor, Beanie, Pydantic
+  - ~120MB size
+
+- **Frontend Node:** `frontend/node_modules/` - Node.js dependencies
+
+  - Managed by pnpm
+  - Separate from Python dependencies
+
+- **CrewAI Integration:** `backend/financial_document_analyzer_crew/`
+  - Separate subproject with own `pyproject.toml`
+  - Not yet integrated into main backend
+  - Will share parent `backend/venv` when integrated
+
+### Environment Workflow
+
+```bash
+# Backend development
+cd backend
+source venv/bin/activate
+python -m app.main
+
+# Frontend development
+cd frontend
+pnpm install
+pnpm dev
+```
+
+### Prevention Measures
+
+- `.gitignore` includes: `venv/`, `.venv/`, `env/`, `.env/`
+- Single source of truth for dependencies
+- No duplicate virtual environments
+- Clear documentation in VENV_CLEANUP_REPORT.md
+
 ## Future Patterns (To Be Implemented)
 
 ### Database Integration

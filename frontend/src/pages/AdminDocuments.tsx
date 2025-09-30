@@ -21,7 +21,7 @@ import {
 import { useAuth } from "../hooks/useAuthContext";
 import { useDocuments } from "../hooks/useDocuments";
 import { getRoleDisplayName, getRoleBadgeColor } from "../utils/roleUtils";
-import PDFUploadZone from "../components/PDFUploadZone";
+import DocumentAnalysisWorkflow from "../components/DocumentAnalysisWorkflow";
 import DocumentList from "../components/DocumentList";
 
 const AdminDocuments = () => {
@@ -193,25 +193,21 @@ const AdminDocuments = () => {
           </Card>
         </div>
 
-        {/* Upload and Document Management */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-          {/* Upload Section */}
-          <div className="xl:col-span-1">
-            <PDFUploadZone
-              onUploadSuccess={(document) => {
-                toast.success(
-                  `Document "${document.filename}" uploaded successfully!`
-                );
-              }}
-              onUploadError={(error) => {
-                toast.error(`Upload failed: ${error}`);
-              }}
-              maxSizeBytes={10 * 1024 * 1024} // 10MB limit for security
-              className="h-fit"
-            />
+        {/* Document Analysis Workflow */}
+        <div className="mb-8">
+          <DocumentAnalysisWorkflow
+            onWorkflowComplete={(analysisResult) => {
+              toast.success("Document analysis completed successfully!");
+              console.log("Analysis completed:", analysisResult);
+            }}
+          />
+        </div>
 
-            {/* Admin Features */}
-            <Card className="mt-6">
+        {/* Admin Features and Document Management */}
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+          {/* Admin Features */}
+          <div className="xl:col-span-1">
+            <Card>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <Shield className="h-5 w-5" />
@@ -249,6 +245,7 @@ const AdminDocuments = () => {
 
           {/* Document List */}
           <div className="xl:col-span-2">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">All Documents</h3>
             <DocumentList
               onDocumentSelect={(document) => {
                 toast.info(`Viewing document: ${document.filename}`);

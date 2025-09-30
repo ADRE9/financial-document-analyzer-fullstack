@@ -36,6 +36,8 @@ export interface DocumentUploadRequest {
   document_type: DocumentType;
   description?: string;
   password?: string;
+  auto_analyze?: boolean;
+  analysis_query?: string;
 }
 
 export interface DocumentAnalysisResponse {
@@ -43,7 +45,6 @@ export interface DocumentAnalysisResponse {
   filename: string;
   document_type: DocumentType;
   analysis_results: Record<string, unknown>;
-  confidence_score: number;
   processed_at: string;
   status: string;
   is_password_protected: boolean;
@@ -126,4 +127,55 @@ export interface SessionInfo {
 export interface UserSessionsResponse {
   sessions: SessionInfo[];
   total_sessions: number;
+}
+
+// CrewAI Analysis Types
+export interface CrewAnalysisRequest {
+  document_path: string;
+  query: string;
+}
+
+export interface CrewAnalysisResponse {
+  status: string;
+  analysis_result: Record<string, any>;
+  execution_time: number;
+  document_validated: boolean;
+  error_message?: string;
+  markdown_content?: string; // Extracted markdown for rendering
+  structured_data?: {
+    // Parsed markdown sections
+    executive_summary?: string;
+    investment_thesis?: string;
+    recommendation?: string;
+    key_strengths?: string;
+    key_risks?: string;
+    recommendations_section?: string;
+  };
+}
+
+export interface DocumentValidationResponse {
+  status: string;
+  validation_result: {
+    is_financial_document: boolean;
+    confidence_score?: number;
+    document_type?: string;
+    error?: string;
+    raw_result?: string;
+  };
+  document_path: string;
+}
+
+export interface CrewHealthResponse {
+  status: string;
+  crew_importable: boolean;
+  environment_variables: Record<
+    string,
+    {
+      configured: boolean;
+      is_dummy: boolean;
+    }
+  >;
+  crew_path: string;
+  warnings?: string[];
+  error?: string;
 }

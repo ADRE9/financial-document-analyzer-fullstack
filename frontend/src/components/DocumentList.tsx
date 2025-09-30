@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { useDocuments, useDeleteDocument } from "../hooks/useDocuments";
+import { useAnalyzeDocument } from "../hooks/useCrewAnalysis";
 import type { DocumentAnalysisResponse } from "../types/api";
 import { DocumentItem } from "./documents/DocumentItem";
 import { DocumentDetailsDialog } from "./documents/DocumentDetailsDialog";
@@ -27,6 +28,7 @@ export const DocumentList = ({
 
   const { data: documents, isLoading, error, refetch } = useDocuments();
   const deleteMutation = useDeleteDocument();
+  const analyzeMutation = useAnalyzeDocument();
 
   const handleDeleteDocument = useCallback(async () => {
     if (!documentToDelete) return;
@@ -56,6 +58,34 @@ export const DocumentList = ({
       onDocumentSelect?.(document);
     },
     [onDocumentSelect]
+  );
+
+  const handleAnalyzeDocument = useCallback(
+    async (document: DocumentAnalysisResponse) => {
+      try {
+        toast.loading(`Analyzing ${document.filename}...`, {
+          id: `analyze-${document.document_id}`,
+        });
+
+        await analyzeMutation.mutateAsync({
+          documentId: document.document_id,
+          query: "Provide a comprehensive financial analysis of this document",
+        });
+
+        toast.success(`Analysis completed for ${document.filename}`, {
+          id: `analyze-${document.document_id}`,
+        });
+
+        // Refresh the document list to show updated status
+        refetch();
+      } catch (error: unknown) {
+        const errorMessage = (error as Error)?.message || "Analysis failed";
+        toast.error(errorMessage, {
+          id: `analyze-${document.document_id}`,
+        });
+      }
+    },
+    [analyzeMutation, refetch]
   );
 
   if (isLoading) {
@@ -147,6 +177,7 @@ export const DocumentList = ({
                 document={document}
                 onView={handleViewDocument}
                 onDelete={openDeleteDialog}
+                onAnalyze={handleAnalyzeDocument}
               />
             ))}
           </div>

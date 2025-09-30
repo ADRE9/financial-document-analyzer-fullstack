@@ -1,0 +1,1 @@
+TASK_SKIPPED: Cannot provide investment recommendations - document validation failed in document analysis step.

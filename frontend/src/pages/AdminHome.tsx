@@ -4,7 +4,6 @@ import { Shield } from "lucide-react";
 
 import { useAuth } from "../hooks/useAuthContext";
 import { useHealth } from "../hooks/useHealth";
-import { useDocuments } from "../hooks/useDocuments";
 import { useLogout } from "../hooks/useLogout";
 import { AppHeader } from "../components/layout/AppHeader";
 import { WelcomeSection } from "../components/dashboard/WelcomeSection";
@@ -17,7 +16,6 @@ const AdminHome = () => {
   const { user, isAdmin } = useAuth();
   const navigate = useNavigate();
   const { data: health, isLoading: healthLoading } = useHealth();
-  const { data: documents, isLoading: documentsLoading } = useDocuments();
   const handleLogout = useLogout();
 
   // Redirect if not admin (additional protection) - moved to useEffect to avoid side effects during render
@@ -59,10 +57,7 @@ const AdminHome = () => {
           <SystemHealthCard health={health} isLoading={healthLoading} />
         </div>
 
-        <AdminStatsGrid
-          documentsCount={documents?.length || 0}
-          isDocumentsLoading={documentsLoading}
-        />
+        <AdminStatsGrid />
 
         <AdminActionsPanel onNavigateToDocuments={handleNavigateToDocuments} />
 

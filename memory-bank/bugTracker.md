@@ -536,15 +536,40 @@ This file tracks all bugs, issues, and inefficiencies found in the codebase. Eac
   - No linting errors introduced
 - **Verification**: Document retrieval and deletion operations now work correctly with proper ObjectId handling
 
+### BUG-023: Password Hashing Authentication Failures
+
+- **Status**: ✅ Fixed
+- **Priority**: 🔴 Critical
+- **Category**: Backend
+- **Description**: Password hashing system was failing due to bcrypt version compatibility issues and improper handling of password length limits, causing all authentication requests to fail with 500 errors
+- **Files**: `backend/app/utils/password.py`, `backend/requirements.txt`
+- **Impact**: Complete authentication system failure - users cannot register or login
+- **Discovery Date**: 2024-09-29
+- **Resolution Date**: 2024-09-29
+- **Steps to Reproduce**:
+  1. Attempt to register a new user with POST `/auth/register`
+  2. System fails with "password cannot be longer than 72 bytes" error
+  3. bcrypt version compatibility warnings appear in logs
+- **Expected**: Users should be able to register and login with valid passwords
+- **Actual**: ✅ **FIXED** - Implemented FastAPI recommended password hashing patterns with compatible library versions
+- **Fix Details**:
+  - Updated bcrypt to version 4.1.3 and passlib to 1.7.4 for compatibility
+  - Simplified password hashing logic following FastAPI documentation patterns
+  - Removed complex password truncation logic in favor of proper validation
+  - Updated password validation to limit passwords to 72 characters (bcrypt's natural limit)
+  - Implemented proper error handling and logging for password operations
+  - Used exact FastAPI recommended PassLib configuration
+- **Verification**: Both registration and login endpoints now work correctly, authentication system fully functional
+
 ---
 
 ## Bug Statistics
 
-- **Total Bugs**: 22
+- **Total Bugs**: 23
 - **Open**: 7
 - **In Progress**: 0
-- **Fixed**: 15
-- **Critical**: 0 (BUG-019, BUG-022 Fixed)
+- **Fixed**: 16
+- **Critical**: 0 (BUG-019, BUG-022, BUG-023 Fixed)
 - **High**: 0 (BUG-017, BUG-018, BUG-020, BUG-021 Fixed)
 - **Medium**: 4
 - **Low**: 0

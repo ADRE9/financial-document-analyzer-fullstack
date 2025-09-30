@@ -5,7 +5,7 @@ This module contains protected endpoints that require authentication to access.
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPBearer
 
@@ -42,9 +42,9 @@ async def hello_protected_route(
             "user_id": current_user.id,
             "username": current_user.username,
             "email": current_user.email,
-            "access_time": datetime.utcnow().isoformat()
+            "access_time": datetime.now(timezone.utc).isoformat()
         },
-        timestamp=datetime.utcnow()
+        timestamp=datetime.now(timezone.utc)
     )
 
 
@@ -88,9 +88,9 @@ async def admin_only_route(
             "username": current_user.username,
             "role": current_user.role.value,
             "access_level": "admin",
-            "access_time": datetime.utcnow().isoformat()
+            "access_time": datetime.now(timezone.utc).isoformat()
         },
-        timestamp=datetime.utcnow()
+        timestamp=datetime.now(timezone.utc)
     )
 
 
@@ -116,9 +116,9 @@ async def viewer_access_route(
             "username": current_user.username,
             "role": current_user.role.value,
             "access_level": "viewer",
-            "access_time": datetime.utcnow().isoformat()
+            "access_time": datetime.now(timezone.utc).isoformat()
         },
-        timestamp=datetime.utcnow()
+        timestamp=datetime.now(timezone.utc)
     )
 
 
@@ -144,9 +144,9 @@ async def admin_with_decorator_route(
             "username": current_user.username,
             "role": current_user.role.value,
             "decorator_type": "require_admin",
-            "access_time": datetime.utcnow().isoformat()
+            "access_time": datetime.now(timezone.utc).isoformat()
         },
-        timestamp=datetime.utcnow()
+        timestamp=datetime.now(timezone.utc)
     )
 
 
@@ -174,10 +174,10 @@ async def test_authentication(
             "email": current_user.email,
             "is_active": current_user.is_active,
             "is_verified": current_user.is_verified,
-            "test_time": datetime.utcnow().isoformat(),
+            "test_time": datetime.now(timezone.utc).isoformat(),
             "status": "Authentication system is working correctly"
         },
-        timestamp=datetime.utcnow()
+        timestamp=datetime.now(timezone.utc)
     )
 
 
@@ -206,10 +206,10 @@ async def test_simple_auth(
             data={
                 "authenticated": True,
                 "user_id": user_id,
-                "test_time": datetime.utcnow().isoformat(),
+                "test_time": datetime.now(timezone.utc).isoformat(),
                 "status": "JWT token verification working correctly"
             },
-            timestamp=datetime.utcnow()
+            timestamp=datetime.now(timezone.utc)
         )
         
     except Exception as e:

@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from typing import Optional, Dict, Any, List
 from enum import Enum
 from beanie import Document, Indexed
-from pydantic import Field, ConfigDict, validator
+from pydantic import Field, ConfigDict, field_validator
 from pymongo import IndexModel
 
 from .base import BaseDocument
@@ -95,7 +95,8 @@ class FinancialDocument(BaseDocument):
             IndexModel([("user_id", 1), ("is_archived", 1), ("status", 1)]),
         ]
     
-    @validator('tags')
+    @field_validator('tags')
+    @classmethod
     def validate_tags(cls, v):
         """Validate and clean tags."""
         if v is None:
@@ -103,7 +104,8 @@ class FinancialDocument(BaseDocument):
         # Remove empty tags, strip whitespace, convert to lowercase
         return [tag.strip().lower() for tag in v if tag and tag.strip()]
     
-    @validator('file_size')
+    @field_validator('file_size')
+    @classmethod
     def validate_file_size(cls, v):
         """Validate file size (max 100MB as per requirements)."""
         max_size = 100 * 1024 * 1024  # 100MB in bytes
