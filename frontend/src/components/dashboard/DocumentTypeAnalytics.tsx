@@ -84,7 +84,9 @@ export const DocumentTypeAnalytics = () => {
         Last updated:{" "}
         {isLoading
           ? "..."
-          : new Date(analytics?.last_updated || "").toLocaleTimeString()}
+          : analytics?.last_updated
+          ? new Date(analytics.last_updated).toLocaleTimeString()
+          : "No data available"}
       </div>
     </div>
   );

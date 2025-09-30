@@ -212,7 +212,9 @@ export const PerformanceMetrics = () => {
         Last updated:{" "}
         {isLoading
           ? "..."
-          : new Date(metrics?.last_updated || "").toLocaleTimeString()}
+          : metrics?.last_updated
+          ? new Date(metrics.last_updated).toLocaleTimeString()
+          : "No data available"}
       </div>
     </div>
   );
