@@ -1,99 +1,84 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+// React Query hooks for CrewAI analysis operations
+
+import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   runCrewAnalysis,
   getCrewHealth,
   validateDocument,
   analyzeDocument,
 } from "../services/api";
-import type {
-  CrewAnalysisRequest,
-  CrewAnalysisResponse,
-  DocumentValidationResponse,
-  CrewHealthResponse,
-  DocumentAnalysisResponse,
-} from "../types/api";
+import type { CrewAnalysisRequest } from "../types/api";
 
-/**
- * Hook for running CrewAI analysis on documents
- */
-export const useCrewAnalysis = () => {
-  return useMutation<CrewAnalysisResponse, Error, CrewAnalysisRequest>({
-    mutationFn: async (requestData: CrewAnalysisRequest) => {
-      return await runCrewAnalysis(requestData);
-    },
-    retry: false, // Don't retry analysis calls automatically
-  });
+// Query keys
+export const crewKeys = {
+  all: ["crew"] as const,
+  health: () => [...crewKeys.all, "health"] as const,
+  analyses: () => [...crewKeys.all, "analysis"] as const,
+  analysis: (documentId: string) =>
+    [...crewKeys.analyses(), documentId] as const,
 };
 
-/**
- * Hook for checking CrewAI service health
- */
+// Get CrewAI health status
 export const useCrewHealth = () => {
-  return useQuery<CrewHealthResponse, Error>({
-    queryKey: ["crew", "health"],
-    queryFn: async () => {
-      return await getCrewHealth();
-    },
+  return useQuery({
+    queryKey: crewKeys.health(),
+    queryFn: getCrewHealth,
     staleTime: 5 * 60 * 1000, // 5 minutes
-    retry: 2,
+    retry: 1,
   });
 };
 
-/**
- * Hook for validating documents without full analysis
- */
-export const useDocumentValidation = () => {
-  return useMutation<DocumentValidationResponse, Error, CrewAnalysisRequest>({
-    mutationFn: async (requestData: CrewAnalysisRequest) => {
-      return await validateDocument(requestData);
+// Run CrewAI analysis mutation
+export const useRunCrewAnalysis = () => {
+  return useMutation({
+    mutationFn: (request: CrewAnalysisRequest) => runCrewAnalysis(request),
+    onError: (error) => {
+      console.error("CrewAI analysis failed:", error);
     },
-    retry: false,
   });
 };
 
-/**
- * Hook for analyzing uploaded documents by ID
- */
+// Validate document mutation
+export const useValidateDocument = () => {
+  return useMutation({
+    mutationFn: (request: CrewAnalysisRequest) => validateDocument(request),
+    onError: (error) => {
+      console.error("Document validation failed:", error);
+    },
+  });
+};
+
+// Analyze existing document mutation
 export const useAnalyzeDocument = () => {
-  return useMutation<
-    DocumentAnalysisResponse,
-    Error,
-    { documentId: string; query?: string }
-  >({
-    mutationFn: async ({ documentId, query }) => {
-      return await analyzeDocument(documentId, query);
+  return useMutation({
+    mutationFn: ({ id, query }: { id: string; query?: string }) =>
+      analyzeDocument(id, query),
+    onError: (error) => {
+      console.error("Document analysis failed:", error);
     },
-    retry: false,
   });
 };
 
-/**
- * Combined hook for document upload and analysis workflow
- */
+// Document analysis workflow hook (wrapper around useRunCrewAnalysis)
 export const useDocumentAnalysisWorkflow = () => {
-  const analysisMutation = useAnalyzeDocument();
+  const mutation = useRunCrewAnalysis();
 
-  const runAnalysis = async (
-    documentId: string,
-    query: string = "Provide a comprehensive analysis of this financial document"
-  ) => {
-    try {
-      const result = await analysisMutation.mutateAsync({
-        documentId,
-        query,
-      });
-      return result;
-    } catch (error) {
-      console.error("Analysis failed:", error);
-      throw error;
-    }
+  const runAnalysis = async (documentPath: string, query: string) => {
+    return mutation.mutateAsync({
+      document_path: documentPath,
+      query: query,
+    });
+  };
+
+  const resetAnalysis = () => {
+    mutation.reset();
   };
 
   return {
     runAnalysis,
-    isAnalyzing: analysisMutation.isPending,
-    analysisError: analysisMutation.error,
-    analysisResult: analysisMutation.data,
-    resetAnalysis: analysisMutation.reset,
+    isAnalyzing: mutation.isPending,
+    analysisError: mutation.error,
+    analysisResult: mutation.data,
+    resetAnalysis,
   };
 };

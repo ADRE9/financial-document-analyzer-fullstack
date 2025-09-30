@@ -56,7 +56,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   // Set error from user query
   useEffect(() => {
     if (userError) {
-      setError(userError.message);
+      setError((userError as Error)?.message || "Failed to load user");
     }
   }, [userError]);
 

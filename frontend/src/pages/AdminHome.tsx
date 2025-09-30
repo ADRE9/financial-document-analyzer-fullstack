@@ -25,14 +25,15 @@ const AdminHome = () => {
     }
   }, [isAdmin, navigate]);
 
+  // Define all hooks before any conditional returns
+  const handleNavigateToDocuments = useCallback(() => {
+    navigate("/admin/documents");
+  }, [navigate]);
+
   // Early return if not admin to prevent rendering
   if (!isAdmin) {
     return null;
   }
-
-  const handleNavigateToDocuments = useCallback(() => {
-    navigate("/admin/documents");
-  }, [navigate]);
 
   return (
     <div className="min-h-screen bg-gray-50">

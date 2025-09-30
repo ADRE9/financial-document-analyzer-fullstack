@@ -101,7 +101,7 @@ export const ProcessingTrends = () => {
                   {/* Only show every 7th date label or if it's the first/last date */}
                   {(index % 7 === 0 ||
                     index === 0 ||
-                    index === trends.daily_counts.length - 1) && (
+                    index === (trends.daily_counts?.length || 0) - 1) && (
                     <div className="text-xs text-gray-500 mt-2 -rotate-45 origin-top-left">
                       {new Date(day.date).toLocaleDateString(undefined, {
                         month: "short",

@@ -126,7 +126,7 @@ export const QueryHistory = ({
     try {
       await navigator.clipboard.writeText(query);
       toast.success("Query copied to clipboard");
-    } catch (error) {
+    } catch {
       toast.error("Failed to copy query");
     }
   }, []);
@@ -248,6 +248,7 @@ export const QueryHistory = ({
 };
 
 // Export a hook for using query history functionality
+// eslint-disable-next-line react-refresh/only-export-components
 export const useQueryHistory = () => {
   const addToHistory = useCallback((query: string) => {
     if (!query.trim()) return;

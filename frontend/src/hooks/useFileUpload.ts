@@ -27,6 +27,7 @@ export const useFileValidation = (maxSizeBytes: number) => {
       }
 
       // Check for suspicious characters in filename
+      // eslint-disable-next-line no-control-regex
       const suspiciousChars = /[<>:"|?*\x00-\x1f]/;
       if (suspiciousChars.test(file.name)) {
         return "Filename contains invalid characters";

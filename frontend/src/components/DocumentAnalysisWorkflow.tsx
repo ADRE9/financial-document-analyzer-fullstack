@@ -115,15 +115,8 @@ export const DocumentAnalysisWorkflow = ({
         analysisQuery
       );
 
-      // Convert DocumentAnalysisResponse to CrewAnalysisResponse format
-      const crewResult: CrewAnalysisResponse = {
-        status: result.status === "completed" ? "success" : "error",
-        analysis_result: result.analysis_results,
-        execution_time: 0, // Not available from document endpoint
-        document_validated: result.status === "completed",
-        error_message:
-          result.status === "failed" ? "Analysis failed" : undefined,
-      };
+      // runAnalysis returns CrewAnalysisResponse directly
+      const crewResult: CrewAnalysisResponse = result as CrewAnalysisResponse;
 
       setAnalysisResult(crewResult);
       setCurrentStep(2);

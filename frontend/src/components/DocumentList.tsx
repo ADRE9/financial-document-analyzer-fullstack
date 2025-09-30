@@ -26,7 +26,17 @@ export const DocumentList = ({
   const [documentToDelete, setDocumentToDelete] =
     useState<DocumentAnalysisResponse | null>(null);
 
-  const { data: documents, isLoading, error, refetch } = useDocuments();
+  const {
+    data: documents,
+    isLoading,
+    error,
+    refetch,
+  } = useDocuments() as {
+    data: DocumentAnalysisResponse[] | undefined;
+    isLoading: boolean;
+    error: Error | null;
+    refetch: () => void;
+  };
   const deleteMutation = useDeleteDocument();
   const analyzeMutation = useAnalyzeDocument();
 
@@ -68,7 +78,7 @@ export const DocumentList = ({
         });
 
         await analyzeMutation.mutateAsync({
-          documentId: document.document_id,
+          id: document.document_id,
           query: "Provide a comprehensive financial analysis of this document",
         });
 

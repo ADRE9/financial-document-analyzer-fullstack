@@ -1,14 +1,19 @@
 // React Query hooks for document operations
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiClient } from "../services/api";
+import {
+  getDocuments,
+  getDocument,
+  uploadDocument,
+  deleteDocument,
+} from "../services/api";
 import type { DocumentUploadRequest } from "../types/api";
 
 // Query keys
 export const documentKeys = {
   all: ["documents"] as const,
   lists: () => [...documentKeys.all, "list"] as const,
-  list: (filters: Record<string, any>) =>
+  list: (filters: Record<string, unknown>) =>
     [...documentKeys.lists(), { filters }] as const,
   details: () => [...documentKeys.all, "detail"] as const,
   detail: (id: string) => [...documentKeys.details(), id] as const,
@@ -18,7 +23,7 @@ export const documentKeys = {
 export const useDocuments = () => {
   return useQuery({
     queryKey: documentKeys.lists(),
-    queryFn: () => apiClient.getDocuments(),
+    queryFn: getDocuments,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 };
@@ -27,7 +32,7 @@ export const useDocuments = () => {
 export const useDocument = (id: string) => {
   return useQuery({
     queryKey: documentKeys.detail(id),
-    queryFn: () => apiClient.getDocument(id),
+    queryFn: () => getDocument(id),
     enabled: !!id,
   });
 };
@@ -43,7 +48,7 @@ export const useUploadDocument = () => {
     }: {
       file: File;
       uploadData: DocumentUploadRequest;
-    }) => apiClient.uploadDocument(file, uploadData),
+    }) => uploadDocument(file, uploadData),
     onSuccess: () => {
       // Invalidate and refetch documents list
       queryClient.invalidateQueries({ queryKey: documentKeys.lists() });
@@ -59,7 +64,7 @@ export const useDeleteDocument = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (id: string) => apiClient.deleteDocument(id),
+    mutationFn: (id: string) => deleteDocument(id),
     onSuccess: (_, deletedId) => {
       // Remove the document from cache
       queryClient.removeQueries({ queryKey: documentKeys.detail(deletedId) });

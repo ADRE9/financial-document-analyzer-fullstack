@@ -1,9 +1,13 @@
 import { FileText, Clock, CheckCircle } from "lucide-react";
 import { useAnalyticsOverview } from "../../hooks/useAnalytics";
+import type { AnalyticsOverview as AnalyticsOverviewType } from "../../types/api";
 import { Card } from "../ui/card";
 
 export const AnalyticsOverview = () => {
-  const { data: analytics, isLoading } = useAnalyticsOverview();
+  const { data: analytics, isLoading } = useAnalyticsOverview() as {
+    data: AnalyticsOverviewType | undefined;
+    isLoading: boolean;
+  };
 
   const formatNumber = (num: number) => {
     return new Intl.NumberFormat().format(Math.round(num));

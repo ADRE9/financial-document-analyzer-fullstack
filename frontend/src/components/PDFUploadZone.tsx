@@ -1,19 +1,15 @@
 import { useState, useCallback, useMemo } from "react";
-import { FileText, AlertTriangle, CheckCircle, X, Lock } from "lucide-react";
+import { FileText, AlertTriangle, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
-
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
-import { Badge } from "./ui/badge";
-import { Button } from "./ui/button";
-import { Progress } from "./ui/progress";
-import { Input } from "./ui/input";
-import { Label } from "./ui/label";
 import { useUploadDocument } from "../hooks/useDocuments";
 import { DocumentType, type DocumentAnalysisResponse } from "../types/api";
 import { FileDropZone } from "./upload/FileDropZone";
+import { SelectedFileCard } from "./upload/SelectedFileCard";
 import { UploadStatus } from "./upload/UploadStatus";
+import { FileRequirements } from "./upload/FileRequirements";
 import { useFileValidation, useFileDragAndDrop } from "../hooks/useFileUpload";
-import QueryHistory, { useQueryHistory } from "./QueryHistory";
+import { useQueryHistory } from "./QueryHistory";
 
 interface PDFUploadZoneProps {
   onUploadSuccess?: (
@@ -59,14 +55,6 @@ export const PDFUploadZone = ({
   const { isDragOver, handleDragOver, handleDragLeave, handleDrop } =
     useFileDragAndDrop(handleFileSelect);
 
-  const formatFileSize = useCallback((bytes: number): string => {
-    if (bytes === 0) return "0 Bytes";
-    const k = 1024;
-    const sizes = ["Bytes", "KB", "MB", "GB"];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
-  }, []);
-
   const resetForm = useCallback(() => {
     setSelectedFile(null);
     setUploadProgress(0);
@@ -95,7 +83,7 @@ export const PDFUploadZone = ({
         });
       }, 200);
 
-      const result = await uploadMutation.mutateAsync({
+      const result = (await uploadMutation.mutateAsync({
         file: selectedFile,
         uploadData: {
           filename: selectedFile.name,
@@ -105,7 +93,7 @@ export const PDFUploadZone = ({
           auto_analyze: autoAnalyze,
           analysis_query: analysisQuery || undefined,
         },
-      });
+      })) as DocumentAnalysisResponse;
 
       clearInterval(progressInterval);
       setUploadProgress(100);
@@ -118,8 +106,6 @@ export const PDFUploadZone = ({
       }
 
       onUploadSuccess?.(result, analysisQuery || undefined);
-
-      // Reset form
       resetForm();
     } catch (error: unknown) {
       setUploadProgress(0);
@@ -150,10 +136,13 @@ export const PDFUploadZone = ({
   }, [
     selectedFile,
     password,
+    analysisQuery,
+    autoAnalyze,
     uploadMutation,
     onUploadSuccess,
     onUploadError,
     resetForm,
+    addToHistory,
   ]);
 
   const getStatusIcon = useMemo(() => {
@@ -194,132 +183,21 @@ export const PDFUploadZone = ({
           />
         )}
 
-        {/* Selected File Display */}
+        {/* Selected File Card */}
         {selectedFile && (
-          <div className="border rounded-lg p-4 bg-gray-50 dark:bg-gray-900">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center space-x-3">
-                <FileText className="h-8 w-8 text-blue-500" />
-                <div>
-                  <h4 className="font-medium text-gray-900 dark:text-gray-100">
-                    {selectedFile.name}
-                  </h4>
-                  <p className="text-sm text-gray-500">
-                    {formatFileSize(selectedFile.size)} •{" "}
-                    {selectedFile.type || "Unknown type"}
-                  </p>
-                </div>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={resetForm}
-                disabled={uploadMutation.isPending}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-
-            {/* Upload Progress */}
-            {uploadMutation.isPending && (
-              <div className="mb-4">
-                <div className="flex justify-between text-sm mb-1">
-                  <span>Uploading...</span>
-                  <span>{uploadProgress}%</span>
-                </div>
-                <Progress value={uploadProgress} className="h-2" />
-              </div>
-            )}
-
-            {/* Password Input */}
-            <div className="space-y-2">
-              <Label htmlFor="pdf-password" className="text-sm font-medium">
-                PDF Password (if protected)
-              </Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  id="pdf-password"
-                  type="password"
-                  placeholder="Enter PDF password if the file is password-protected"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  disabled={uploadMutation.isPending}
-                  className="pl-10"
-                />
-              </div>
-              <p className="text-xs text-gray-500">
-                Only required if your PDF is password-protected
-              </p>
-            </div>
-
-            {/* Analysis Query Input */}
-            <div className="space-y-2">
-              <Label htmlFor="analysis-query" className="text-sm font-medium">
-                Analysis Query
-              </Label>
-              <textarea
-                id="analysis-query"
-                placeholder="What would you like to know about this document? (e.g., 'Summarize the key financial metrics', 'What are the main revenue sources?')"
-                value={analysisQuery}
-                onChange={(e) => setAnalysisQuery(e.target.value)}
-                disabled={uploadMutation.isPending}
-                className="w-full min-h-[80px] px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-vertical"
-                rows={3}
-              />
-              <p className="text-xs text-gray-500">
-                Optional: Specify what you want to analyze or leave blank for
-                general analysis
-              </p>
-
-              {/* Query History */}
-              <QueryHistory
-                onQuerySelect={(query) => setAnalysisQuery(query)}
-                className="mt-3"
-              />
-            </div>
-
-            {/* Auto-Analyze Option */}
-            <div className="flex items-center space-x-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-              <input
-                id="auto-analyze"
-                type="checkbox"
-                checked={autoAnalyze}
-                onChange={(e) => setAutoAnalyze(e.target.checked)}
-                disabled={uploadMutation.isPending}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-              <Label
-                htmlFor="auto-analyze"
-                className="text-sm font-medium cursor-pointer select-none"
-              >
-                Analyze immediately after upload
-              </Label>
-            </div>
-            <p className="text-xs text-gray-500">
-              {autoAnalyze
-                ? "✓ Document will be analyzed automatically using CrewAI after upload"
-                : "Document will be uploaded only. You can analyze it later from the document list."}
-            </p>
-
-            {/* Upload Button */}
-            <div className="flex justify-end space-x-2">
-              <Button
-                variant="outline"
-                onClick={resetForm}
-                disabled={uploadMutation.isPending}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleUpload}
-                disabled={uploadMutation.isPending}
-                className="min-w-[100px]"
-              >
-                {uploadMutation.isPending ? "Uploading..." : "Upload"}
-              </Button>
-            </div>
-          </div>
+          <SelectedFileCard
+            file={selectedFile}
+            password={password}
+            analysisQuery={analysisQuery}
+            autoAnalyze={autoAnalyze}
+            uploadProgress={uploadProgress}
+            isUploading={uploadMutation.isPending}
+            onPasswordChange={setPassword}
+            onQueryChange={setAnalysisQuery}
+            onAutoAnalyzeChange={setAutoAnalyze}
+            onCancel={resetForm}
+            onUpload={handleUpload}
+          />
         )}
 
         {/* Upload Status */}
@@ -330,20 +208,7 @@ export const PDFUploadZone = ({
         />
 
         {/* File Requirements */}
-        <div className="text-xs text-gray-500 space-y-1">
-          <div className="flex flex-wrap gap-2">
-            <Badge variant="secondary">PDF Only</Badge>
-            <Badge variant="outline">Password Protected Supported</Badge>
-          </div>
-          <p>Maximum file size: {Math.round(maxSizeBytes / (1024 * 1024))}MB</p>
-          <p className="text-red-600">
-            ⚠️ Only PDF files are accepted for security reasons
-          </p>
-          <p className="text-blue-600">
-            🔒 Password-protected PDFs are supported - enter password when
-            uploading
-          </p>
-        </div>
+        <FileRequirements maxSizeBytes={maxSizeBytes} />
       </CardContent>
     </Card>
   );

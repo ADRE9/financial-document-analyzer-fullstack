@@ -23,11 +23,15 @@ import { useDocuments } from "../hooks/useDocuments";
 import { getRoleDisplayName, getRoleBadgeColor } from "../utils/roleUtils";
 import DocumentAnalysisWorkflow from "../components/DocumentAnalysisWorkflow";
 import DocumentList from "../components/DocumentList";
+import type { DocumentAnalysisResponse } from "../types/api";
 
 const AdminDocuments = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const { data: documents, isLoading } = useDocuments();
+  const { data: documents, isLoading } = useDocuments() as {
+    data: DocumentAnalysisResponse[] | undefined;
+    isLoading: boolean;
+  };
 
   const handleLogout = async () => {
     try {
@@ -245,7 +249,9 @@ const AdminDocuments = () => {
 
           {/* Document List */}
           <div className="xl:col-span-2">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">All Documents</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              All Documents
+            </h3>
             <DocumentList
               onDocumentSelect={(document) => {
                 toast.info(`Viewing document: ${document.filename}`);

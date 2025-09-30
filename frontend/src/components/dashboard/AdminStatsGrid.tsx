@@ -8,9 +8,13 @@ import {
 } from "lucide-react";
 import { useAnalyticsOverview } from "../../hooks/useAnalytics";
 import { Card } from "../ui/card";
+import type { AnalyticsOverview } from "../../types/api";
 
 export const AdminStatsGrid = () => {
-  const { data: analytics, isLoading } = useAnalyticsOverview();
+  const { data: analytics, isLoading } = useAnalyticsOverview() as {
+    data: AnalyticsOverview | undefined;
+    isLoading: boolean;
+  };
 
   const formatNumber = (num: number) => {
     return new Intl.NumberFormat().format(Math.round(num));
@@ -122,7 +126,7 @@ export const AdminStatsGrid = () => {
             <p className="text-2xl font-bold text-yellow-600">
               {isLoading
                 ? "Loading..."
-                : formatPercentage(analytics?.confidence_scores.average || 0)}
+                : formatPercentage(analytics?.confidence_scores?.average || 0)}
             </p>
             <p className="text-sm text-gray-500">Average confidence</p>
           </div>

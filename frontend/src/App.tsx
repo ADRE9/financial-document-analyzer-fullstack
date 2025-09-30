@@ -3,6 +3,7 @@ import { useHealth } from "./hooks/useHealth";
 import { useDocuments } from "./hooks/useDocuments";
 import { Button } from "./components/ui/button";
 import { Progress } from "./components/ui/progress";
+import type { HealthResponse, DocumentAnalysisResponse } from "./types/api";
 import "./App.css";
 
 function App() {
@@ -13,12 +14,20 @@ function App() {
     data: health,
     isLoading: healthLoading,
     error: healthError,
-  } = useHealth();
+  } = useHealth() as {
+    data: HealthResponse | undefined;
+    isLoading: boolean;
+    error: Error | null;
+  };
   const {
     data: documents,
     isLoading: documentsLoading,
     error: documentsError,
-  } = useDocuments();
+  } = useDocuments() as {
+    data: DocumentAnalysisResponse[] | undefined;
+    isLoading: boolean;
+    error: Error | null;
+  };
 
   return (
     <div className="min-h-screen bg-gray-100 p-8">

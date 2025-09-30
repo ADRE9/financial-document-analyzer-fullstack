@@ -15,27 +15,6 @@ import type {
   CrewAnalysisResponse,
 } from "../types/api";
 
-// Temporary adapter to convert DocumentAnalysisResponse to CrewAnalysisResponse
-const adaptDocumentAnalysisToCrewAnalysis = (
-  docAnalysis: DocumentAnalysisResponse
-): CrewAnalysisResponse => {
-  // Extract markdown content from analysis_results.raw_output
-  const markdownContent =
-    docAnalysis.analysis_results?.raw_output ||
-    docAnalysis.analysis_results?.analysis_output ||
-    docAnalysis.analysis_results?.result;
-
-  return {
-    status: docAnalysis.status,
-    analysis_result: docAnalysis.analysis_results,
-    execution_time: 0, // Not available in DocumentAnalysisResponse
-    document_validated: true, // Assume true if we got a response
-    error_message: undefined,
-    markdown_content: markdownContent,
-    structured_data: undefined, // Will need proper crew analysis for this
-  };
-};
-
 // Strict TypeScript interfaces
 interface EnhancedDocumentAnalysisWorkflowProps {
   readonly className?: string;
@@ -157,12 +136,12 @@ export const EnhancedDocumentAnalysisWorkflow = ({
         state.uploadedDocument.document_id,
         state.analysisQuery
       );
-      const adaptedResult = adaptDocumentAnalysisToCrewAnalysis(result);
-      actions.setAnalysisResult(adaptedResult);
+      // runAnalysis already returns CrewAnalysisResponse
+      actions.setAnalysisResult(result as CrewAnalysisResponse);
       actions.setCurrentStep(2);
 
       toast.success("Analysis completed successfully!");
-      onWorkflowComplete?.(adaptedResult);
+      onWorkflowComplete?.(result as CrewAnalysisResponse);
     } catch (error) {
       console.error("Analysis failed:", error);
       let errorMessage = "Analysis failed";

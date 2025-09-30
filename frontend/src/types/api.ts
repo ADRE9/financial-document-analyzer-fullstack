@@ -137,6 +137,7 @@ export interface CrewAnalysisRequest {
 
 export interface CrewAnalysisResponse {
   status: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   analysis_result: Record<string, any>;
   execution_time: number;
   document_validated: boolean;
@@ -178,4 +179,63 @@ export interface CrewHealthResponse {
   crew_path: string;
   warnings?: string[];
   error?: string;
+}
+
+// Analytics types
+export interface AnalyticsOverview {
+  total_documents: number;
+  documents_processed_today: number;
+  documents_processed_this_week: number;
+  documents_processed_this_month: number;
+  average_processing_time_seconds: number;
+  success_rate: number;
+  confidence_scores?: {
+    average: number;
+    min: number;
+    max: number;
+  };
+  document_types?: Record<string, number>;
+  last_updated?: string;
+}
+
+export interface ProcessingTrends {
+  period: string;
+  trend_direction?: string;
+  total_processed?: number;
+  average_daily?: number;
+  daily_counts?: Array<{
+    date: string;
+    count: number;
+    success_count: number;
+    failure_count: number;
+  }>;
+  trends?: Array<{
+    date: string;
+    count: number;
+    success_count: number;
+    failure_count: number;
+  }>;
+}
+
+export interface PerformanceMetrics {
+  response_times: {
+    average: number;
+    min: number;
+    max: number;
+    p95: number;
+  };
+  error_rates: {
+    total_errors: number;
+    error_rate: number;
+    errors_by_type: Record<string, number>;
+  };
+  throughput: {
+    requests_per_minute: number;
+    documents_per_hour: number;
+  };
+}
+
+export interface DocumentTypeAnalytics {
+  type_breakdown: Record<string, number>;
+  last_updated?: string;
 }
