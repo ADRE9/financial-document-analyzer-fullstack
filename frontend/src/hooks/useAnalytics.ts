@@ -1,5 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
-import { apiClient } from "../services/api";
+import {
+  getAnalyticsOverview,
+  getProcessingTrends,
+  getPerformanceMetrics,
+  getDocumentTypeAnalytics,
+} from "../services/api";
 
 export interface AnalyticsOverview {
   total_documents: number;
@@ -76,9 +81,7 @@ export interface DocumentTypeAnalytics {
 export function useAnalyticsOverview() {
   return useQuery<AnalyticsOverview>({
     queryKey: ["analytics", "overview"],
-    queryFn: async () => {
-      return await apiClient.request<AnalyticsOverview>("/analytics/overview");
-    },
+    queryFn: getAnalyticsOverview,
     refetchInterval: 30000, // Refetch every 30 seconds
   });
 }
@@ -86,11 +89,7 @@ export function useAnalyticsOverview() {
 export function useProcessingTrends(days: number = 30) {
   return useQuery<ProcessingTrends>({
     queryKey: ["analytics", "trends", days],
-    queryFn: async () => {
-      return await apiClient.request<ProcessingTrends>(
-        `/analytics/trends?days=${days}`
-      );
-    },
+    queryFn: () => getProcessingTrends(days),
     refetchInterval: 60000, // Refetch every minute
   });
 }
@@ -98,11 +97,7 @@ export function useProcessingTrends(days: number = 30) {
 export function usePerformanceMetrics() {
   return useQuery<PerformanceMetrics>({
     queryKey: ["analytics", "performance"],
-    queryFn: async () => {
-      return await apiClient.request<PerformanceMetrics>(
-        "/analytics/performance"
-      );
-    },
+    queryFn: getPerformanceMetrics,
     refetchInterval: 15000, // Refetch every 15 seconds
   });
 }
@@ -110,11 +105,7 @@ export function usePerformanceMetrics() {
 export function useDocumentTypeAnalytics() {
   return useQuery<DocumentTypeAnalytics>({
     queryKey: ["analytics", "document-types"],
-    queryFn: async () => {
-      return await apiClient.request<DocumentTypeAnalytics>(
-        "/analytics/document-types"
-      );
-    },
+    queryFn: getDocumentTypeAnalytics,
     refetchInterval: 30000, // Refetch every 30 seconds
   });
 }

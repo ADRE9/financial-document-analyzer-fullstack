@@ -59,39 +59,97 @@ def _extract_markdown_from_result(result: Any) -> Optional[str]:
     Returns:
         Extracted markdown content as string, or None if not found
     """
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    # Debug logging
+    logger.info(f"Extracting markdown from result type: {type(result)}")
+    logger.info(f"Result has 'raw' attribute: {hasattr(result, 'raw')}")
+    
+    content = None
+    
     # If result has a 'raw' attribute (CrewOutput object)
     if hasattr(result, 'raw'):
         content = result.raw
+        logger.info(f"Extracted from .raw attribute, length: {len(content) if content else 0}")
     # If result is a dict with 'raw_output' key
     elif isinstance(result, dict) and 'raw_output' in result:
         content = result['raw_output']
+        logger.info(f"Extracted from raw_output key, length: {len(content) if content else 0}")
     # If result is a dict with tasks_output
     elif isinstance(result, dict) and 'tasks_output' in result:
         tasks = result['tasks_output']
+        logger.info(f"Found tasks_output with {len(tasks) if tasks else 0} tasks")
         if tasks and len(tasks) > 0:
             last_task = tasks[-1]
+            logger.info(f"Last task type: {type(last_task)}")
             if hasattr(last_task, 'raw'):
                 content = last_task.raw
+                logger.info(f"Extracted from last task .raw, length: {len(content) if content else 0}")
             elif isinstance(last_task, dict) and 'raw' in last_task:
                 content = last_task['raw']
+                logger.info(f"Extracted from last task raw key, length: {len(content) if content else 0}")
             else:
                 content = str(last_task)
+                logger.info(f"Converted last task to string, length: {len(content) if content else 0}")
         else:
             content = str(result)
+            logger.info(f"No tasks found, converted result to string, length: {len(content) if content else 0}")
+    # If result is a dict, check for other possible keys
+    elif isinstance(result, dict):
+        # Check for common keys that might contain output
+        possible_keys = ['output', 'result', 'analysis', 'content', 'markdown', 'report']
+        for key in possible_keys:
+            if key in result:
+                content = result[key]
+                logger.info(f"Extracted from {key} key, length: {len(content) if content else 0}")
+                break
+        
+        if not content:
+            # If no specific key found, try to extract from the whole result
+            content = str(result)
+            logger.info(f"No specific key found, converted result to string, length: {len(content) if content else 0}")
     # If result is already a string
     elif isinstance(result, str):
         content = result
+        logger.info(f"Result is string, length: {len(content) if content else 0}")
     else:
         content = str(result)
+        logger.info(f"Converted result to string, length: {len(content) if content else 0}")
+    
+    if not content:
+        logger.warning("No content extracted from result")
+        return None
+    
+    logger.info(f"Content preview: {repr(content[:200])}")
     
     # Extract markdown from code blocks if present
     if '```markdown' in content:
-        # Extract markdown from code block
-        match = re.search(r'```markdown\s*(.*?)\s*```', content, re.DOTALL)
-        if match:
-            return match.group(1).strip()
+        logger.info("Found markdown code block, extracting...")
+        # Enhanced pattern to handle both closed and unclosed markdown blocks
+        patterns = [
+            r'```markdown\s*(.*?)\s*```',  # Closed markdown block
+            r'```markdown\s*(.*?)(?:\s*```|$)',  # Closed or unclosed markdown block
+        ]
+        
+        for pattern in patterns:
+            match = re.search(pattern, content, re.DOTALL)
+            if match:
+                extracted = match.group(1).strip()
+                logger.info(f"Successfully extracted markdown, length: {len(extracted)}")
+                return extracted
+        
+        logger.warning("Found markdown marker but could not extract content")
+    else:
+        logger.info("No markdown code block found, checking if content is already markdown...")
+        # If no code block, check if the content itself looks like markdown
+        content = content.strip()
+        if content and (content.startswith('#') or '##' in content or '**' in content):
+            logger.info("Content appears to be markdown, returning as-is")
+            return content
     
-    return content.strip()
+    logger.info("Returning content as-is")
+    return content.strip() if content else None
 
 
 def _parse_markdown_sections(markdown: str) -> Dict[str, Any]:
@@ -104,23 +162,86 @@ def _parse_markdown_sections(markdown: str) -> Dict[str, Any]:
     Returns:
         Dictionary with parsed sections
     """
+    import logging
+    logger = logging.getLogger(__name__)
+    
     sections = {}
     
-    # Extract key sections using regex
+    if not markdown:
+        logger.warning("Empty markdown content provided to parser")
+        return sections
+    
+    logger.info(f"Parsing markdown content, length: {len(markdown)}")
+    
+    # Extract key sections using multiple patterns for flexibility
     patterns = {
-        'executive_summary': r'##\s*(?:\d+\.\s*)?Executive Summary\s*(.*?)(?=##|\Z)',
-        'investment_thesis': r'##\s*(?:\d+\.\s*)?Investment Thesis\s*(.*?)(?=##|\Z)',
-        'recommendation': r'\*\*Recommendation:\*\*\s*\*\*([^*]+)\*\*',
-        'key_strengths': r'##\s*(?:\d+\.\s*)?Key Strengths(?:\s+and\s+Opportunities)?\s*(.*?)(?=##|\Z)',
-        'key_risks': r'##\s*(?:\d+\.\s*)?Key Risks(?:\s+and\s+Concerns)?\s*(.*?)(?=##|\Z)',
-        'recommendations_section': r'##\s*(?:\d+\.\s*)?Recommendations\s+by\s+Investor\s+Profile\s*(.*?)(?=##|\Z)',
+        'executive_summary': [
+            r'##\s*(?:\d+\.\s*)?Executive Summary\s*(.*?)(?=##|\Z)',
+            r'###\s*(?:\d+\.\s*)?Executive Summary\s*(.*?)(?=###|\Z)',
+            r'\*\*Executive Summary:?\*\*\s*(.*?)(?=\*\*|\Z)',
+        ],
+        'investment_thesis': [
+            r'##\s*(?:\d+\.\s*)?Investment Thesis\s*(.*?)(?=##|\Z)',
+            r'###\s*(?:\d+\.\s*)?Investment Thesis\s*(.*?)(?=###|\Z)',
+            r'\*\*Investment Thesis:?\*\*\s*(.*?)(?=\*\*|\Z)',
+        ],
+        'recommendation': [
+            r'\*\*Recommendation:\*\*\s*\*\*([^*]+)\*\*',
+            r'recommendation\s+is\s+\*\*([^*]+)\*\*',
+            r'recommendation:\s*\*\*([^*]+)\*\*',
+            r'\*\*([A-Z]+)\*\*\s+(?:for|with)',  # Matches **HOLD** or **BUY** etc.
+        ],
+        'key_strengths': [
+            r'##\s*(?:\d+\.\s*)?Key Strengths(?:\s+and\s+Opportunities)?\s*(.*?)(?=##|\Z)',
+            r'###\s*(?:\d+\.\s*)?Key Strengths(?:\s+and\s+Opportunities)?\s*(.*?)(?=###|\Z)',
+            r'\*\*Key Strengths(?:\s+and\s+Opportunities)?:?\*\*\s*(.*?)(?=\*\*|\Z)',
+        ],
+        'key_risks': [
+            r'##\s*(?:\d+\.\s*)?Key Risks(?:\s+and\s+Concerns)?\s*(.*?)(?=##|\Z)',
+            r'###\s*(?:\d+\.\s*)?Key Risks(?:\s+and\s+Concerns)?\s*(.*?)(?=###|\Z)',
+            r'\*\*Key Risks(?:\s+and\s+Concerns)?:?\*\*\s*(.*?)(?=\*\*|\Z)',
+        ],
+        'recommendations_section': [
+            r'##\s*(?:\d+\.\s*)?Recommendations\s+by\s+Investor\s+Profile\s*(.*?)(?=##|\Z)',
+            r'###\s*(?:\d+\.\s*)?Recommendations\s+by\s+Investor\s+Profile\s*(.*?)(?=###|\Z)',
+            r'\*\*Recommendations\s+by\s+Investor\s+Profile:?\*\*\s*(.*?)(?=\*\*|\Z)',
+        ],
     }
     
-    for key, pattern in patterns.items():
-        match = re.search(pattern, markdown, re.DOTALL | re.IGNORECASE)
-        if match:
-            sections[key] = match.group(1).strip()
+    # Try each pattern for each section
+    for section_key, pattern_list in patterns.items():
+        found = False
+        for pattern in pattern_list:
+            match = re.search(pattern, markdown, re.DOTALL | re.IGNORECASE)
+            if match:
+                content = match.group(1).strip()
+                if content:  # Only add if there's actual content
+                    sections[section_key] = content
+                    logger.info(f"Found {section_key} section, length: {len(content)}")
+                    found = True
+                    break
+        
+        if not found:
+            logger.warning(f"Could not find {section_key} section")
     
+    # If no specific sections found, try to extract a general recommendation
+    if 'recommendation' not in sections:
+        # Look for common recommendation patterns
+        recommendation_patterns = [
+            r'(?:overall\s+)?recommendation(?:\s+is)?\s*:?\s*\*\*([^*\n]+)\*\*',
+            r'\*\*([A-Z]{2,})\*\*(?:\s+(?:for|with|recommendation))',
+            r'(?:we\s+)?recommend\s*:?\s*\*\*([^*\n]+)\*\*',
+        ]
+        
+        for pattern in recommendation_patterns:
+            match = re.search(pattern, markdown, re.IGNORECASE)
+            if match:
+                recommendation = match.group(1).strip()
+                sections['recommendation'] = recommendation
+                logger.info(f"Found general recommendation: {recommendation}")
+                break
+    
+    logger.info(f"Successfully parsed {len(sections)} sections: {list(sections.keys())}")
     return sections
 
 

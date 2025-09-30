@@ -15,6 +15,27 @@ import type {
   CrewAnalysisResponse,
 } from "../types/api";
 
+// Temporary adapter to convert DocumentAnalysisResponse to CrewAnalysisResponse
+const adaptDocumentAnalysisToCrewAnalysis = (
+  docAnalysis: DocumentAnalysisResponse
+): CrewAnalysisResponse => {
+  // Extract markdown content from analysis_results.raw_output
+  const markdownContent =
+    docAnalysis.analysis_results?.raw_output ||
+    docAnalysis.analysis_results?.analysis_output ||
+    docAnalysis.analysis_results?.result;
+
+  return {
+    status: docAnalysis.status,
+    analysis_result: docAnalysis.analysis_results,
+    execution_time: 0, // Not available in DocumentAnalysisResponse
+    document_validated: true, // Assume true if we got a response
+    error_message: undefined,
+    markdown_content: markdownContent,
+    structured_data: undefined, // Will need proper crew analysis for this
+  };
+};
+
 // Strict TypeScript interfaces
 interface EnhancedDocumentAnalysisWorkflowProps {
   readonly className?: string;
@@ -52,7 +73,7 @@ export const EnhancedDocumentAnalysisWorkflow = ({
     useDocumentAnalysisWorkflow();
 
   // Memoized workflow steps to prevent unnecessary re-renders
-  const workflowSteps: readonly WorkflowStep[] = useMemo(
+  const workflowSteps: WorkflowStep[] = useMemo(
     () =>
       [
         {
@@ -131,31 +152,36 @@ export const EnhancedDocumentAnalysisWorkflow = ({
     try {
       actions.setCurrentStep(1);
 
-      // Construct the file path (in a real scenario, this would come from the backend)
-      const documentPath = `/app/uploads/${state.uploadedDocument.document_id}.pdf`;
-
-      const result = await runAnalysis(documentPath, state.analysisQuery);
-      actions.setAnalysisResult(result);
+      // Use document ID for analysis
+      const result = await runAnalysis(
+        state.uploadedDocument.document_id,
+        state.analysisQuery
+      );
+      const adaptedResult = adaptDocumentAnalysisToCrewAnalysis(result);
+      actions.setAnalysisResult(adaptedResult);
       actions.setCurrentStep(2);
 
       toast.success("Analysis completed successfully!");
-      onWorkflowComplete?.(result);
+      onWorkflowComplete?.(adaptedResult);
     } catch (error) {
       console.error("Analysis failed:", error);
       let errorMessage = "Analysis failed";
-      
+
       if (error instanceof Error) {
         if (error.message.includes("Cannot read properties of undefined")) {
-          errorMessage = "CrewAI service is not available. Please check if the backend is running.";
+          errorMessage =
+            "CrewAI service is not available. Please check if the backend is running.";
         } else if (error.message.includes("fetch")) {
-          errorMessage = "Network error. Please check your connection and try again.";
+          errorMessage =
+            "Network error. Please check your connection and try again.";
         } else if (error.message.includes("404")) {
-          errorMessage = "Document not found. Please try uploading the document again.";
+          errorMessage =
+            "Document not found. Please try uploading the document again.";
         } else {
           errorMessage = error.message;
         }
       }
-      
+
       toast.error(`Analysis failed: ${errorMessage}`);
     }
   }, [

@@ -8,8 +8,6 @@ import {
   AlertTriangle,
   Info,
   TrendingUp,
-  TrendingDown,
-  DollarSign,
   Target,
   Shield,
   ChevronDown,
@@ -20,6 +18,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
+import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import type { CrewAnalysisResponse } from "../types/api";
 
 interface AnalysisReportProps {
@@ -101,10 +100,12 @@ export const AnalysisReport = ({
   // Handle export to PDF
   const handleExport = () => {
     // Create a blob from the markdown content
-    const content = analysisResult.markdown_content || JSON.stringify(analysisResult.analysis_result, null, 2);
-    const blob = new Blob([content], { type: 'text/markdown' });
+    const content =
+      analysisResult.markdown_content ||
+      JSON.stringify(analysisResult.analysis_result, null, 2);
+    const blob = new Blob([content], { type: "text/markdown" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
     a.download = `analysis-${documentFilename}-${Date.now()}.md`;
     document.body.appendChild(a);
@@ -115,7 +116,9 @@ export const AnalysisReport = ({
 
   // Handle share (copy to clipboard)
   const handleShare = async () => {
-    const content = analysisResult.markdown_content || JSON.stringify(analysisResult.analysis_result, null, 2);
+    const content =
+      analysisResult.markdown_content ||
+      JSON.stringify(analysisResult.analysis_result, null, 2);
     try {
       await navigator.clipboard.writeText(content);
       alert("Analysis copied to clipboard!");
@@ -135,7 +138,9 @@ export const AnalysisReport = ({
                 <FileText className="h-6 w-6 text-white" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-gray-900">Analysis Report</h2>
+                <h2 className="text-2xl font-bold text-gray-900">
+                  Analysis Report
+                </h2>
                 <p className="text-sm text-gray-600 font-normal mt-1">
                   AI-powered financial document analysis
                 </p>
@@ -166,7 +171,9 @@ export const AnalysisReport = ({
               >
                 <div className="flex items-center space-x-1">
                   {getStatusIcon(analysisResult.status)}
-                  <span className="capitalize font-semibold">{analysisResult.status}</span>
+                  <span className="capitalize font-semibold">
+                    {analysisResult.status}
+                  </span>
                 </div>
               </Badge>
             </div>
@@ -178,20 +185,28 @@ export const AnalysisReport = ({
               <FileText className="h-5 w-5 text-blue-600" />
               <div className="min-w-0 flex-1">
                 <p className="text-xs text-gray-500 font-medium">Document</p>
-                <p className="text-sm text-gray-900 truncate font-semibold">{documentFilename}</p>
+                <p className="text-sm text-gray-900 truncate font-semibold">
+                  {documentFilename}
+                </p>
               </div>
             </div>
             <div className="flex items-center space-x-3 p-3 bg-white rounded-lg border border-gray-200">
               <Clock className="h-5 w-5 text-purple-600" />
               <div>
-                <p className="text-xs text-gray-500 font-medium">Processing Time</p>
+                <p className="text-xs text-gray-500 font-medium">
+                  Processing Time
+                </p>
                 <p className="text-sm text-gray-900 font-semibold">
                   {formatExecutionTime(analysisResult.execution_time)}
                 </p>
               </div>
             </div>
             <div className="flex items-center space-x-3 p-3 bg-white rounded-lg border border-gray-200">
-              <CheckCircle className="h-5 w-5 text-green-600" />
+              {analysisResult.document_validated ? (
+                <CheckCircle className="h-5 w-5 text-green-600" />
+              ) : (
+                <AlertTriangle className="h-5 w-5 text-red-600" />
+              )}
               <div>
                 <p className="text-xs text-gray-500 font-medium">Validation</p>
                 <Badge
@@ -207,12 +222,31 @@ export const AnalysisReport = ({
               </div>
             </div>
           </div>
+          {!analysisResult.document_validated && (
+            <Alert variant="destructive" className="mt-4">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Document Validation Failed</AlertTitle>
+              <AlertDescription>
+                The uploaded document could not be validated as a financial
+                document. Please ensure you are uploading a valid financial
+                document such as an annual report, financial statement, or
+                similar document.
+                {analysisResult.error_message && (
+                  <div className="mt-2 text-sm">
+                    Error details: {analysisResult.error_message}
+                  </div>
+                )}
+              </AlertDescription>
+            </Alert>
+          )}
           {query && (
             <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
               <div className="flex items-start space-x-2">
                 <Info className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
                 <div className="min-w-0 flex-1">
-                  <span className="text-sm font-semibold text-blue-900">Analysis Query:</span>
+                  <span className="text-sm font-semibold text-blue-900">
+                    Analysis Query:
+                  </span>
                   <p className="text-sm text-blue-800 italic mt-1">"{query}"</p>
                 </div>
               </div>
@@ -228,7 +262,9 @@ export const AnalysisReport = ({
             <div className="flex items-start space-x-3">
               <AlertTriangle className="h-6 w-6 text-red-600 mt-1 flex-shrink-0" />
               <div className="flex-1">
-                <h4 className="font-semibold text-red-900 text-lg">Analysis Error</h4>
+                <h4 className="font-semibold text-red-900 text-lg">
+                  Analysis Error
+                </h4>
                 <p className="text-red-700 mt-2 leading-relaxed">
                   {analysisResult.error_message}
                 </p>
@@ -249,8 +285,10 @@ export const AnalysisReport = ({
           </CardHeader>
           <CardContent>
             <div className="flex items-center space-x-4">
-              <Badge 
-                variant={getRecommendationVariant(analysisResult.structured_data.recommendation)}
+              <Badge
+                variant={getRecommendationVariant(
+                  analysisResult.structured_data.recommendation
+                )}
                 className="text-2xl font-bold px-6 py-3"
               >
                 {analysisResult.structured_data.recommendation.toUpperCase()}
@@ -390,38 +428,50 @@ export const AnalysisReport = ({
           {showFullMarkdown && (
             <CardContent>
               <div className="prose prose-sm lg:prose-base max-w-none prose-headings:text-gray-900 prose-p:text-gray-700 prose-strong:text-gray-900 prose-ul:text-gray-700 prose-ol:text-gray-700">
-                <ReactMarkdown 
+                <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
                   components={{
                     // Custom styling for headings
-                    h1: ({node, ...props}) => (
-                      <h1 className="text-3xl font-bold text-blue-900 border-b-2 border-blue-200 pb-2 mb-4" {...props} />
+                    h1: ({ node, ...props }) => (
+                      <h1
+                        className="text-3xl font-bold text-blue-900 border-b-2 border-blue-200 pb-2 mb-4"
+                        {...props}
+                      />
                     ),
-                    h2: ({node, ...props}) => (
-                      <h2 className="text-2xl font-semibold text-gray-800 mt-8 mb-4" {...props} />
+                    h2: ({ node, ...props }) => (
+                      <h2
+                        className="text-2xl font-semibold text-gray-800 mt-8 mb-4"
+                        {...props}
+                      />
                     ),
-                    h3: ({node, ...props}) => (
-                      <h3 className="text-xl font-semibold text-gray-700 mt-6 mb-3" {...props} />
+                    h3: ({ node, ...props }) => (
+                      <h3
+                        className="text-xl font-semibold text-gray-700 mt-6 mb-3"
+                        {...props}
+                      />
                     ),
                     // Custom styling for lists
-                    ul: ({node, ...props}) => (
+                    ul: ({ node, ...props }) => (
                       <ul className="space-y-2 my-4" {...props} />
                     ),
-                    li: ({node, ...props}) => (
+                    li: ({ node, ...props }) => (
                       <li className="flex items-start space-x-2">
                         <span className="text-blue-500 mt-2">•</span>
                         <span className="flex-1" {...props} />
                       </li>
                     ),
                     // Custom styling for strong/bold text
-                    strong: ({node, ...props}) => (
+                    strong: ({ node, ...props }) => (
                       <strong className="font-bold text-gray-900" {...props} />
                     ),
                     // Custom styling for code blocks
-                    code: ({node, className, children, ...props}) => {
+                    code: ({ node, className, children, ...props }) => {
                       const isInline = !className;
                       return isInline ? (
-                        <code className="bg-gray-100 text-red-600 px-1.5 py-0.5 rounded text-sm font-mono" {...props}>
+                        <code
+                          className="bg-gray-100 text-red-600 px-1.5 py-0.5 rounded text-sm font-mono"
+                          {...props}
+                        >
                           {children}
                         </code>
                       ) : (
@@ -431,8 +481,11 @@ export const AnalysisReport = ({
                       );
                     },
                     // Custom styling for blockquotes
-                    blockquote: ({node, ...props}) => (
-                      <blockquote className="border-l-4 border-blue-500 pl-4 py-2 my-4 bg-blue-50 italic" {...props} />
+                    blockquote: ({ node, ...props }) => (
+                      <blockquote
+                        className="border-l-4 border-blue-500 pl-4 py-2 my-4 bg-blue-50 italic"
+                        {...props}
+                      />
                     ),
                   }}
                 >
@@ -493,9 +546,11 @@ export const AnalysisReport = ({
             <div className="flex items-start space-x-3">
               <Info className="h-5 w-5 text-yellow-600 mt-1" />
               <div>
-                <h4 className="font-medium text-yellow-800">No Formatted Results</h4>
+                <h4 className="font-medium text-yellow-800">
+                  No Formatted Results
+                </h4>
                 <p className="text-yellow-700 mt-1">
-                  The analysis completed, but no markdown content was returned. 
+                  The analysis completed, but no markdown content was returned.
                   Check the raw data above for results.
                 </p>
               </div>

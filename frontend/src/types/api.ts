@@ -45,7 +45,6 @@ export interface DocumentAnalysisResponse {
   filename: string;
   document_type: DocumentType;
   analysis_results: Record<string, unknown>;
-  confidence_score: number;
   processed_at: string;
   status: string;
   is_password_protected: boolean;
@@ -142,8 +141,9 @@ export interface CrewAnalysisResponse {
   execution_time: number;
   document_validated: boolean;
   error_message?: string;
-  markdown_content?: string;  // Extracted markdown for rendering
-  structured_data?: {  // Parsed markdown sections
+  markdown_content?: string; // Extracted markdown for rendering
+  structured_data?: {
+    // Parsed markdown sections
     executive_summary?: string;
     investment_thesis?: string;
     recommendation?: string;

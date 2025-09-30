@@ -304,6 +304,23 @@ class ApiClient {
     });
   }
 
+  // Analytics endpoints
+  async getAnalyticsOverview(): Promise<any> {
+    return this.request<any>("/analytics/overview");
+  }
+
+  async getProcessingTrends(days: number = 30): Promise<any> {
+    return this.request<any>(`/analytics/trends?days=${days}`);
+  }
+
+  async getPerformanceMetrics(): Promise<any> {
+    return this.request<any>("/analytics/performance");
+  }
+
+  async getDocumentTypeAnalytics(): Promise<any> {
+    return this.request<any>("/analytics/document-types");
+  }
+
   // CrewAI Analysis endpoints
   async runCrewAnalysis(
     requestData: CrewAnalysisRequest
@@ -363,3 +380,9 @@ export const validateDocument = (
   requestData: CrewAnalysisRequest
 ): Promise<DocumentValidationResponse> =>
   apiClient.validateDocument(requestData);
+export const getAnalyticsOverview = () => apiClient.getAnalyticsOverview();
+export const getProcessingTrends = (days?: number) =>
+  apiClient.getProcessingTrends(days);
+export const getPerformanceMetrics = () => apiClient.getPerformanceMetrics();
+export const getDocumentTypeAnalytics = () =>
+  apiClient.getDocumentTypeAnalytics();

@@ -57,11 +57,6 @@ export const DocumentItem = ({
           </div>
           <div className="flex items-center space-x-4 text-sm text-gray-500">
             <span>Uploaded {formatDate(document.processed_at)}</span>
-            {document.confidence_score > 0 && (
-              <span>
-                Confidence: {Math.round(document.confidence_score * 100)}%
-              </span>
-            )}
           </div>
         </div>
       </div>
