@@ -561,15 +561,61 @@ This file tracks all bugs, issues, and inefficiencies found in the codebase. Eac
   - Used exact FastAPI recommended PassLib configuration
 - **Verification**: Both registration and login endpoints now work correctly, authentication system fully functional
 
+### BUG-024: Missing Timezone Import in Health Router
+
+- **Status**: ✅ Fixed
+- **Priority**: 🔴 Critical
+- **Category**: Backend
+- **Description**: The health router uses `timezone.utc` but doesn't import the `timezone` module, causing `NameError: name 'timezone' is not defined` and 500 Internal Server Error on all health endpoints
+- **Files**: `backend/app/routers/health.py` (lines 24, 43, 50, 65, 79)
+- **Impact**: All health check endpoints return 500 errors, breaking monitoring and health checks
+- **Discovery Date**: 2024-09-30
+- **Resolution Date**: 2024-09-30
+- **Steps to Reproduce**:
+  1. Start the backend server
+  2. Make a GET request to `/health/`
+  3. Server returns 500 Internal Server Error with "name 'timezone' is not defined"
+- **Expected**: Health endpoints should return proper health status responses
+- **Actual**: ✅ **FIXED** - Added missing `timezone` import to health router
+- **Fix Details**:
+  - Updated import statement from `from datetime import datetime` to `from datetime import datetime, timezone`
+  - All health endpoints now work correctly with proper timezone-aware timestamps
+  - No linting errors introduced
+- **Verification**: Health endpoint now returns proper JSON response with timestamp: `{"status":"healthy","message":"API is running successfully","timestamp":"2025-09-30T01:43:55.606382+00:00","version":"1.0.0"}`
+
+### BUG-025: Frontend Calling Wrong Analysis Endpoint
+
+- **Status**: ✅ Fixed
+- **Priority**: 🔴 Critical
+- **Category**: Frontend
+- **Description**: The frontend was calling the `/crew/analyze` endpoint directly with document ID instead of using the proper `/documents/{document_id}/analyze` endpoint, causing 404 errors and incorrect document path handling
+- **Files**: `frontend/src/hooks/useCrewAnalysis.ts` (lines 62-84)
+- **Impact**: Document analysis failed completely - users could not analyze uploaded documents
+- **Discovery Date**: 2024-09-30
+- **Resolution Date**: 2024-09-30
+- **Steps to Reproduce**:
+  1. Upload a document successfully
+  2. Click "Run Analysis" button
+  3. Frontend calls `/crew/analyze` with document ID as document_path
+  4. Backend returns 404 Not Found error
+- **Expected**: Frontend should call `/documents/{document_id}/analyze` endpoint which handles document ID to file path conversion
+- **Actual**: ✅ **FIXED** - Updated `useDocumentAnalysisWorkflow` hook to use `useAnalyzeDocument` instead of `useRunCrewAnalysis`
+- **Fix Details**:
+  - Changed `useDocumentAnalysisWorkflow` hook to use `useAnalyzeDocument` mutation instead of `useRunCrewAnalysis`
+  - Updated `runAnalysis` function to pass `{id: documentId, query: query}` instead of `{document_path: documentPath, query: query}`
+  - Added proper type imports for `DocumentAnalysisResponse`
+  - Frontend now calls the correct `/documents/{document_id}/analyze` endpoint
+- **Verification**: Frontend now properly calls the document analysis endpoint that handles document ID to file path conversion internally
+
 ---
 
 ## Bug Statistics
 
-- **Total Bugs**: 23
+- **Total Bugs**: 24
 - **Open**: 7
 - **In Progress**: 0
-- **Fixed**: 16
-- **Critical**: 0 (BUG-019, BUG-022, BUG-023 Fixed)
+- **Fixed**: 17
+- **Critical**: 0 (BUG-019, BUG-022, BUG-023, BUG-024 Fixed)
 - **High**: 0 (BUG-017, BUG-018, BUG-020, BUG-021 Fixed)
 - **Medium**: 4
 - **Low**: 0

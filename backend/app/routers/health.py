@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from datetime import datetime
+from datetime import datetime, timezone
 import logging
 from app.models.schemas import HealthResponse, HealthStatus
 from app.config import settings

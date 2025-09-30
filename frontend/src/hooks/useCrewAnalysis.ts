@@ -7,7 +7,10 @@ import {
   validateDocument,
   analyzeDocument,
 } from "../services/api";
-import type { CrewAnalysisRequest } from "../types/api";
+import type {
+  CrewAnalysisRequest,
+  DocumentAnalysisResponse,
+} from "../types/api";
 
 // Query keys
 export const crewKeys = {
@@ -59,13 +62,13 @@ export const useAnalyzeDocument = () => {
   });
 };
 
-// Document analysis workflow hook (wrapper around useRunCrewAnalysis)
+// Document analysis workflow hook (wrapper around useAnalyzeDocument)
 export const useDocumentAnalysisWorkflow = () => {
-  const mutation = useRunCrewAnalysis();
+  const mutation = useAnalyzeDocument();
 
-  const runAnalysis = async (documentPath: string, query: string) => {
+  const runAnalysis = async (documentId: string, query: string) => {
     return mutation.mutateAsync({
-      document_path: documentPath,
+      id: documentId,
       query: query,
     });
   };
